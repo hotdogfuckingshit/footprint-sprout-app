@@ -1,0 +1,20 @@
+{
+  "name": "城市腳印冒險",
+  "short_name": "城市腳印",
+  "description": "走路探索城市、收藏地點記憶、用照片生成 3D 寵物的行動冒險 App。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f3df",
+  "theme_color": "#1c6b58",
+  "categories": ["games", "travel", "lifestyle"],
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
