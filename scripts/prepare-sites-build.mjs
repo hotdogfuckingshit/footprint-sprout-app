@@ -7,6 +7,7 @@ const read = (path) => readFileSync(new URL(path, `file:///${root.replace(/\\/g,
 const html = read('dist/index.html');
 const manifest = read('public/manifest.webmanifest');
 const icon = read('public/app-icon.svg');
+const serviceWorker = read('public/sw.js');
 const hosting = read('.openai/hosting.json');
 
 mkdirSync(new URL('../dist/server/', import.meta.url), { recursive: true });
@@ -17,6 +18,7 @@ const server = `
 const HTML = ${JSON.stringify(html)};
 const MANIFEST = ${JSON.stringify(manifest)};
 const APP_ICON = ${JSON.stringify(icon)};
+const SERVICE_WORKER = ${JSON.stringify(serviceWorker)};
 
 const placeTypeMap = {
   all: [],
@@ -183,6 +185,14 @@ export default {
     }
     if (url.pathname === '/app-icon.svg') {
       return new Response(APP_ICON, { headers: { 'content-type': 'image/svg+xml; charset=utf-8' } });
+    }
+    if (url.pathname === '/sw.js') {
+      return new Response(SERVICE_WORKER, {
+        headers: {
+          'content-type': 'application/javascript; charset=utf-8',
+          'cache-control': 'no-cache, no-store, must-revalidate',
+        },
+      });
     }
     const key = env.VITE_GOOGLE_MAPS_API_KEY || env.GOOGLE_MAPS_API_KEY || 'VITE_GOOGLE_MAPS_API_KEY';
     return new Response(HTML.replaceAll('%VITE_GOOGLE_MAPS_API_KEY%', key), {
