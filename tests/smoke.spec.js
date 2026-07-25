@@ -115,3 +115,39 @@ test('online tab renders safe offline state before Firebase is configured', asyn
   await page.locator('#shareLocationBtn').click();
   await expect(page.locator('#toast')).toContainText('請先登入');
 });
+
+test('online tab switches to signed-in UI when auth snapshot arrives', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="online"]').click();
+  await page.evaluate(() => {
+    window.FootprintOnline = {
+      updateLocation(payload) {
+        window.receiveOnlineSnapshot({
+          sharing: true,
+          lastSharedAt: payload.updatedAt,
+        });
+      },
+      stopSharing() {},
+    };
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: {
+        uid: 'test-user',
+        displayName: '測試玩家',
+        email: 'test@example.com',
+      },
+      friendCode: 'ABC12345',
+      friends: [],
+      party: null,
+      sharing: false,
+    });
+  });
+
+  await expect(page.locator('#authContent')).toContainText('測試玩家');
+  await expect(page.locator('#authContent')).not.toContainText('使用 Google 登入');
+  await expect(page.locator('#friendCodeBox')).toContainText('ABC12345');
+
+  await page.locator('#shareLocationBtn').click();
+  await expect(page.locator('#sharingText')).toContainText('分享中');
+});

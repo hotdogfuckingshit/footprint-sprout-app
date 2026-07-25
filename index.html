@@ -1562,6 +1562,13 @@ if(!configured){
 
   const emit = (patch) => window.receiveOnlineSnapshot?.({ configured: true, ...patch });
   const codeFromUid = (uid) => uid.replace(/[^a-z0-9]/gi, '').slice(-8).toUpperCase();
+  const userView = (user) => ({
+    uid: user.uid,
+    displayName: user.displayName || '玩家',
+    email: user.email || '',
+    photoURL: user.photoURL || '',
+  });
+  const firebaseMessage = (error) => error?.code || error?.message || String(error);
 
   async function ensureUser(user){
     const userRef = ref(db, `users/${user.uid}`);
@@ -1586,7 +1593,7 @@ if(!configured){
 
   function subscribeFriends(uid){
     const friendsRef = ref(db, `friends/${uid}`);
-    onValue(friendsRef, (snapshot) => {
+    const unsub = onValue(friendsRef, (snapshot) => {
       clearFriendListeners();
       const friendIds = Object.keys(snapshot.val() || {});
       const friendsById = {};
@@ -1611,13 +1618,20 @@ if(!configured){
         friendUnsubs.push(userUnsub);
         friendUnsubs.push(locationUnsub);
       });
+    }, (error) => {
+      emit({ friends: [] });
+      window.toast?.(`好友資料讀取失敗：${firebaseMessage(error)}`);
     });
+    friendUnsubs.push(unsub);
   }
 
   function subscribeParty(uid){
     if(partyUnsub) partyUnsub();
     const partyRef = ref(db, `parties/${uid}`);
-    partyUnsub = onValue(partyRef, (snapshot) => emit({ party: snapshot.val() || null }));
+    partyUnsub = onValue(partyRef, (snapshot) => emit({ party: snapshot.val() || null }), (error) => {
+      emit({ party: null });
+      window.toast?.(`小隊資料讀取失敗：${firebaseMessage(error)}`);
+    });
   }
 
   onAuthStateChanged(auth, async (user) => {
@@ -1628,14 +1642,20 @@ if(!configured){
       emit({ user: null, friendCode: '', friends: [], party: null, sharing: false, status: 'signed-out' });
       return;
     }
-    const profile = await ensureUser(user);
     emit({
-      user: { uid: user.uid, displayName: user.displayName || '玩家', email: user.email || '', photoURL: user.photoURL || '' },
-      friendCode: profile.friendCode,
+      user: userView(user),
+      friendCode: codeFromUid(user.uid),
       status: 'signed-in',
     });
-    subscribeFriends(user.uid);
-    subscribeParty(user.uid);
+    try {
+      const profile = await ensureUser(user);
+      emit({ user: userView(user), friendCode: profile.friendCode, status: 'signed-in' });
+      subscribeFriends(user.uid);
+      subscribeParty(user.uid);
+    } catch (error) {
+      emit({ user: userView(user), friendCode: codeFromUid(user.uid), friends: [], party: null, status: 'signed-in-db-error' });
+      window.toast?.(`已登入，但資料庫尚未允許讀寫：${firebaseMessage(error)}`);
+    }
   });
 
   window.FootprintOnline = {
@@ -1651,51 +1671,72 @@ if(!configured){
     },
     async addFriendByCode(code){
       if(!currentUser) return window.toast?.('請先登入');
-      const cleanCode = String(code || '').trim().toUpperCase();
-      const usersQuery = query(ref(db, 'users'), orderByChild('friendCode'), equalTo(cleanCode));
-      const snap = await get(usersQuery);
-      let target = null;
-      snap.forEach((child) => { if(!target) target = { uid: child.key, ...(child.val() || {}) }; });
-      if(!target) return window.toast?.('找不到這個好友碼');
-      if(target.uid === currentUser.uid) return window.toast?.('不能加入自己');
-      await update(ref(db), {
-        [`friends/${currentUser.uid}/${target.uid}`]: { uid: target.uid, createdAt: Date.now() },
-        [`friends/${target.uid}/${currentUser.uid}`]: { uid: currentUser.uid, createdAt: Date.now() },
-      });
-      document.getElementById('friendCodeInput').value = '';
-      window.toast?.(`已加入 ${target.displayName || '好友'}`);
+      try {
+        const cleanCode = String(code || '').trim().toUpperCase();
+        const usersQuery = query(ref(db, 'users'), orderByChild('friendCode'), equalTo(cleanCode));
+        const snap = await get(usersQuery);
+        let target = null;
+        snap.forEach((child) => { if(!target) target = { uid: child.key, ...(child.val() || {}) }; });
+        if(!target) return window.toast?.('找不到這個好友碼');
+        if(target.uid === currentUser.uid) return window.toast?.('不能加入自己');
+        await update(ref(db), {
+          [`friends/${currentUser.uid}/${target.uid}`]: { uid: target.uid, createdAt: Date.now() },
+          [`friends/${target.uid}/${currentUser.uid}`]: { uid: currentUser.uid, createdAt: Date.now() },
+        });
+        document.getElementById('friendCodeInput').value = '';
+        window.toast?.(`已加入 ${target.displayName || '好友'}`);
+      } catch (error) {
+        window.toast?.(`加入好友失敗：${firebaseMessage(error)}`);
+      }
     },
     async updateLocation(payload){
       if(!currentUser) return;
-      locationRef = ref(db, `locations/${currentUser.uid}`);
-      await set(locationRef, {
-        lat: Number(payload.lat),
-        lng: Number(payload.lng),
-        accuracy: payload.accuracy ?? null,
-        updatedAt: Date.now(),
-      });
-      onDisconnect(locationRef).remove();
-      emit({ sharing: true, lastSharedAt: Date.now() });
-      window.toast?.('位置已同步給好友');
+      try {
+        locationRef = ref(db, `locations/${currentUser.uid}`);
+        await set(locationRef, {
+          lat: Number(payload.lat),
+          lng: Number(payload.lng),
+          accuracy: payload.accuracy ?? null,
+          updatedAt: Date.now(),
+        });
+        onDisconnect(locationRef).remove();
+        emit({ sharing: true, lastSharedAt: Date.now() });
+        window.toast?.('位置已同步給好友');
+      } catch (error) {
+        emit({ sharing: false });
+        window.toast?.(`位置分享失敗：${firebaseMessage(error)}`);
+      }
     },
     async stopSharing(){
       if(!currentUser) return;
-      if(locationRef) await remove(locationRef);
-      emit({ sharing: false, lastSharedAt: null });
-      window.toast?.('已停止分享位置');
+      try {
+        if(locationRef) await remove(locationRef);
+        emit({ sharing: false, lastSharedAt: null });
+        window.toast?.('已停止分享位置');
+      } catch (error) {
+        window.toast?.(`停止分享失敗：${firebaseMessage(error)}`);
+      }
     },
     async createParty(){
       if(!currentUser) return;
-      const data = { hostUid: currentUser.uid, memberCount: 1, goal: '一起散步', startedAt: Date.now() };
-      await set(ref(db, `parties/${currentUser.uid}`), data);
-      emit({ party: data });
-      window.toast?.('散步小隊已建立');
+      try {
+        const data = { hostUid: currentUser.uid, memberCount: 1, goal: '一起散步', startedAt: Date.now() };
+        await set(ref(db, `parties/${currentUser.uid}`), data);
+        emit({ party: data });
+        window.toast?.('散步小隊已建立');
+      } catch (error) {
+        window.toast?.(`建立小隊失敗：${firebaseMessage(error)}`);
+      }
     },
     async leaveParty(){
       if(!currentUser) return;
-      await remove(ref(db, `parties/${currentUser.uid}`));
-      emit({ party: null });
-      window.toast?.('已離開小隊');
+      try {
+        await remove(ref(db, `parties/${currentUser.uid}`));
+        emit({ party: null });
+        window.toast?.('已離開小隊');
+      } catch (error) {
+        window.toast?.(`離開小隊失敗：${firebaseMessage(error)}`);
+      }
     },
   };
 }
