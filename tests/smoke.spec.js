@@ -53,3 +53,51 @@ test('pet generator requires and accepts an uploaded image', async ({ page }) =>
   await expect(page.locator('#petHolder svg')).toBeVisible();
   await expect(page.locator('#topFrag')).toHaveText('42');
 });
+
+test('nearby places falls back to client Google Places for GitHub Pages', async ({ page }) => {
+  await page.route('**/api/nearby-places**', (route) => {
+    route.fulfill({ status: 404, contentType: 'text/plain', body: 'not found' });
+  });
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(async () => {
+    map = {};
+    window.google = {
+      maps: {
+        LatLng: function LatLng(lat, lng) {
+          return { lat, lng };
+        },
+        places: {
+          PlacesServiceStatus: {
+            OK: 'OK',
+            ZERO_RESULTS: 'ZERO_RESULTS',
+          },
+          PlacesService: function PlacesService() {
+            return {
+              nearbySearch(_request, callback) {
+                callback([
+                  {
+                    place_id: 'mock-place-1',
+                    name: 'Mock Coffee',
+                    vicinity: 'Mock Road 1',
+                    geometry: {
+                      location: {
+                        lat: () => 24.18,
+                        lng: () => 120.64,
+                      },
+                    },
+                    types: ['cafe'],
+                  },
+                ], 'OK');
+              },
+            };
+          },
+        },
+      },
+    };
+    return loadNearbyPlaces('cafe');
+  });
+
+  expect(result.provider).toBe('google');
+  expect(result.places[0].name).toBe('Mock Coffee');
+  expect(result.places[0].latitude).toBe(24.18);
+});

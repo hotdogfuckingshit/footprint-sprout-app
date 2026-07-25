@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#17A673">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/app-icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="app-icon.svg" type="image/svg+xml">
 <title>足跡 · 西屯探索記</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -570,9 +570,7 @@ async function fetchNearbyRealPlaces(){
   const apiLayer = layerForApi(currentFilter);
   try {
     document.getElementById('locateNote').textContent = '正在同步附近真實地點...';
-    const response = await fetch(`/api/nearby-places?lat=${HERE.lat}&lon=${HERE.lng}&layer=${apiLayer}&radius=900`);
-    const data = await response.json();
-    if(!data.ok) throw new Error(data.error?.message || data.error || 'nearby places failed');
+    const data = await loadNearbyPlaces(apiLayer);
     const places = (data.places || []).map(toGameLocation).filter(Boolean);
     if(!places.length){
       document.getElementById('locateNote').textContent = '附近暫時沒有符合分類的真實地點，先顯示預設探索清單';
@@ -596,6 +594,71 @@ async function fetchNearbyRealPlaces(){
 
 function openGoogleMapsHere(){
   window.open(`https://www.google.com/maps/@${HERE.lat},${HERE.lng},15z`, '_blank');
+}
+
+async function loadNearbyPlaces(apiLayer){
+  try {
+    const response = await fetch(`/api/nearby-places?lat=${HERE.lat}&lon=${HERE.lng}&layer=${apiLayer}&radius=900`);
+    if(!response.ok) throw new Error(`api ${response.status}`);
+    const data = await response.json();
+    if(!data.ok) throw new Error(data.error?.message || data.error || 'nearby places failed');
+    return data;
+  } catch (error) {
+    return loadNearbyPlacesFromGoogleMaps(apiLayer);
+  }
+}
+
+function loadNearbyPlacesFromGoogleMaps(apiLayer){
+  return new Promise((resolve, reject) => {
+    if(!window.google?.maps?.places || !map){
+      reject(new Error('Google Maps Places library is not ready'));
+      return;
+    }
+    const includedTypes = {
+      all: [],
+      food: ['restaurant', 'cafe', 'bakery', 'meal_takeaway'],
+      scenic: ['tourist_attraction', 'park', 'museum'],
+      cafe: ['cafe'],
+      walk: ['park', 'tourist_attraction', 'library', 'museum'],
+    }[apiLayer] || [];
+    const service = new google.maps.places.PlacesService(map);
+    const baseRequest = {
+      location: new google.maps.LatLng(HERE.lat, HERE.lng),
+      radius: 900,
+    };
+    const normalize = (place, index) => ({
+      id: place.place_id || `maps-${index}`,
+      source: 'google',
+      name: place.name || `Place ${index + 1}`,
+      address: place.vicinity || place.formatted_address || '',
+      latitude: place.geometry?.location?.lat(),
+      longitude: place.geometry?.location?.lng(),
+      category: place.types?.[0] || 'place',
+      types: place.types || [],
+      googleMapsUri: place.place_id ? `https://www.google.com/maps/search/?api=1&query_place_id=${place.place_id}` : null,
+    });
+    const runRequest = (type) => new Promise((done) => {
+      service.nearbySearch(type ? {...baseRequest, type} : baseRequest, (results, status) => {
+        if(status === google.maps.places.PlacesServiceStatus.OK || status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS){
+          done(results || []);
+        } else {
+          done([]);
+        }
+      });
+    });
+    Promise.all((includedTypes.length ? includedTypes : [null]).map(runRequest))
+      .then((groups) => {
+        const seen = new Set();
+        const places = groups.flat().filter((place) => {
+          const id = place.place_id || place.name;
+          if(!id || seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        }).slice(0, 12).map(normalize).filter((place) => place.name && Number.isFinite(place.latitude) && Number.isFinite(place.longitude));
+        resolve({ ok: true, provider: 'google', places });
+      })
+      .catch(reject);
+  });
 }
 
 async function locateMe(){
