@@ -101,3 +101,17 @@ test('nearby places falls back to client Google Places for GitHub Pages', async 
   expect(result.places[0].name).toBe('Mock Coffee');
   expect(result.places[0].latitude).toBe(24.18);
 });
+
+test('online tab renders safe offline state before Firebase is configured', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="online"]').click();
+
+  await expect(page.locator('#screen-online')).toHaveClass(/active/);
+  await expect(page.locator('#onlineStatus')).toContainText('Firebase');
+  await expect(page.locator('#authContent')).toContainText('Firebase');
+  await expect(page.locator('#friendCodeBox')).toContainText('----');
+  await expect(page.locator('#friendList')).toContainText('登入後');
+
+  await page.locator('#shareLocationBtn').click();
+  await expect(page.locator('#toast')).toContainText('請先登入');
+});
