@@ -117,6 +117,8 @@ test('online tab renders safe offline state before Firebase is configured', asyn
 });
 
 test('online tab switches to signed-in UI when auth snapshot arrives', async ({ page }) => {
+  await page.context().grantPermissions(['geolocation'], { origin: 'http://localhost:5173' });
+  await page.context().setGeolocation({ latitude: 24.1815, longitude: 120.6449 });
   await page.goto('http://localhost:5173');
   await page.locator('.navbtn[data-tab="online"]').click();
   await page.evaluate(() => {
@@ -124,6 +126,11 @@ test('online tab switches to signed-in UI when auth snapshot arrives', async ({ 
       updateLocation(payload) {
         window.receiveOnlineSnapshot({
           sharing: true,
+          myLocation: {
+            lat: payload.lat,
+            lng: payload.lng,
+            updatedAt: payload.updatedAt,
+          },
           lastSharedAt: payload.updatedAt,
         });
       },
@@ -140,6 +147,7 @@ test('online tab switches to signed-in UI when auth snapshot arrives', async ({ 
       friendCode: 'ABC12345',
       friends: [],
       party: null,
+      partyInvites: [],
       sharing: false,
     });
   });
@@ -251,4 +259,113 @@ test('friend code input is readable on mobile and party invite can be accepted',
   await expect(page.locator('#partyStatus')).toContainText('小隊進行中');
   await expect(page.locator('#partyStatus')).toContainText('城市玩家');
   await expect.poll(() => page.evaluate(() => window.joinedParty)).toBe('party-1');
+});
+
+test('friend distance only appears after both sides share locations', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="online"]').click();
+  await page.evaluate(() => {
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: {
+        uid: 'me',
+        displayName: '城市玩家',
+        email: 'me@example.com',
+      },
+      friendCode: 'ABC12345',
+      friends: [
+        {
+          uid: 'friend-1',
+          displayName: '好友A',
+          location: {
+            lat: 24.182,
+            lng: 120.645,
+            updatedAt: Date.now(),
+          },
+        },
+      ],
+      party: null,
+      partyInvites: [],
+      sharing: false,
+      myLocation: null,
+    });
+  });
+
+  await expect(page.locator('#friendList')).toContainText('待你分享');
+
+  await page.evaluate(() => {
+    window.receiveOnlineSnapshot({
+      sharing: true,
+      myLocation: {
+        lat: 24.1815,
+        lng: 120.6449,
+        updatedAt: Date.now(),
+      },
+    });
+  });
+
+  await expect(page.locator('#friendList')).toContainText('57 m');
+});
+
+test('walk party creation sends invites only to checked friends and does not overwrite an active party', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="online"]').click();
+  await page.evaluate(() => {
+    window.createdInvites = null;
+    window.FootprintOnline = {
+      createParty(inviteUids) {
+        window.createdInvites = inviteUids;
+      },
+    };
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: {
+        uid: 'me',
+        displayName: '城市玩家',
+        email: 'me@example.com',
+      },
+      friendCode: 'ABC12345',
+      friends: [
+        { uid: 'friend-a', displayName: '好友A' },
+        { uid: 'friend-b', displayName: '好友B' },
+      ],
+      party: null,
+      partyInvites: [],
+      sharing: false,
+    });
+  });
+
+  await expect(page.locator('#partyInvitePicker')).toContainText('選擇要邀請的好友');
+  await page.locator('#partyInvitePicker input').nth(1).uncheck();
+  await page.getByRole('button', { name: '建立小隊' }).click();
+  await expect.poll(() => page.evaluate(() => window.createdInvites)).toEqual(['friend-a']);
+
+  await page.evaluate(() => {
+    window.createdInvites = null;
+    window.receiveOnlineSnapshot({
+      party: {
+        id: 'existing-party',
+        hostUid: 'friend-a',
+        goal: '一起散步',
+        members: {
+          'friend-a': { displayName: '好友A' },
+          me: { displayName: '城市玩家' },
+        },
+      },
+    });
+  });
+
+  await page.getByRole('button', { name: '建立小隊' }).click();
+  await expect(page.locator('#toast')).toContainText('你已在小隊中');
+  await expect.poll(() => page.evaluate(() => window.createdInvites)).toBeNull();
+});
+
+test('map double click toggles fullscreen map mode', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('#mapWrap').dblclick();
+  await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
+  await page.locator('.map-exit-btn').click();
+  await expect(page.locator('#mapWrap')).not.toHaveClass(/map-fullscreen/);
 });

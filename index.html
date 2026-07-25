@@ -91,6 +91,11 @@ body{
 /* map screen */
 .map-wrap{margin:0 16px 12px; border-radius:22px; overflow:hidden; box-shadow:var(--shadow); border:3px solid var(--paper); position:relative;}
 .map-wrap iframe{width:100%; height:210px; border:0; display:block;}
+.map-wrap.map-fullscreen{position:fixed; inset:0; z-index:220; margin:0; border-radius:0; border:0; box-shadow:none; background:#fff;}
+.map-wrap.map-fullscreen #map{height:100% !important;}
+.map-wrap.map-fullscreen .map-badge{bottom:18px; left:18px;}
+.map-exit-btn{display:none; position:absolute; top:8px; left:8px; background:var(--ink); color:#fff; border:none; border-radius:999px; padding:7px 12px; font-size:11.5px; font-weight:900; box-shadow:var(--shadow); cursor:pointer; font-family:inherit; z-index:2;}
+.map-wrap.map-fullscreen .map-exit-btn{display:block;}
 .map-badge{position:absolute; bottom:8px; left:8px; background:rgba(255,255,255,0.92); padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; color:var(--ink);}
 .locate-btn{position:absolute; top:8px; right:8px; background:var(--paper); border:none; border-radius:999px; padding:6px 12px; font-size:11.5px; font-weight:800; color:var(--leaf-dark); box-shadow:var(--shadow); cursor:pointer; font-family:inherit;}
 .mapline-actions{display:flex; align-items:center; gap:10px; padding:0 16px 8px;}
@@ -246,6 +251,12 @@ body{
 .friend-name{font-size:13px; font-weight:900; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .friend-meta{font-size:11px; color:var(--ink-soft); margin-top:2px;}
 .friend-distance{font-size:12px; color:var(--leaf-dark); font-weight:900;}
+.party-picker{margin-top:10px; border-top:1px solid var(--line); padding-top:10px;}
+.party-picker-title{font-size:12px; font-weight:900; color:var(--ink-soft); margin-bottom:6px;}
+.party-choice{display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--line);}
+.party-choice:first-of-type{border-top:0;}
+.party-choice input{width:20px; height:20px; accent-color:var(--leaf); flex-shrink:0;}
+.party-choice .friend-main{pointer-events:none;}
 .code-box{display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--sky); border-radius:16px; padding:12px; font-weight:900; color:var(--ink);}
 .code-box .num{font-size:20px; letter-spacing:1px;}
 .sharing-dot{width:9px; height:9px; border-radius:50%; background:#B9C6D6; display:inline-block; margin-right:5px;}
@@ -342,11 +353,12 @@ body{
     <!-- ===== MAP SCREEN ===== -->
     <div class="screen active" id="screen-map">
       <div class="hero-line">看見別人的城市記憶，走到那裡，留下你自己的。<br>西屯區內 <b id="visitedCount">0</b>/<span id="totalCount">8</span> 個地點已到訪。</div>
-      <div class="map-wrap">
+      <div class="map-wrap" id="mapWrap" ondblclick="toggleMapFullscreen()" ontouchend="handleMapTouch(event)">
         <div id="map" style="width:100%; height:210px; background:#DCEBF7; display:flex; align-items:center; justify-content:center; color:#5C6B8A; font-size:12px; text-align:center; padding:12px;">
           地圖載入中…如果一直顯示這行字，請確認 .env 已填 VITE_GOOGLE_MAPS_API_KEY
         </div>
         <div class="map-badge" id="mapBadge">📍 西屯區・預設位置</div>
+        <button class="map-exit-btn" onclick="toggleMapFullscreen(false); event.stopPropagation();">退出全螢幕</button>
         <button class="locate-btn" onclick="locateMe()" id="locateBtn">🎯 定位我</button>
       </div>
       <div class="mapline-actions">
@@ -440,9 +452,10 @@ body{
       <div class="online-panel">
         <h3>散步小隊</h3>
         <div id="partyStatus" class="empty-online">第一版先做即時好友定位；小隊會用同一套連線資料顯示一起散步的人。</div>
+        <div id="partyInvitePicker"></div>
         <div class="online-actions" style="margin-top:10px;">
           <button class="btn btn-primary" onclick="createWalkParty()">建立小隊</button>
-          <button class="btn btn-ghost" onclick="leaveWalkParty()">離開小隊</button>
+          <button class="btn btn-ghost" id="leavePartyBtn" onclick="leaveWalkParty()">離開小隊</button>
         </div>
       </div>
     </div>
@@ -579,9 +592,12 @@ let onlineState = {
   friends: [],
   party: null,
   partyInvites: [],
+  myLocation: null,
   sharing: false,
   lastSharedAt: null,
 };
+let selectedInviteUids = new Set();
+let inviteSelectionTouched = false;
 
 function firebaseConfigured(){
   const cfg = window.FOOTPRINT_FIREBASE_CONFIG || {};
@@ -633,6 +649,8 @@ function renderOnline(){
   const sharingDot = document.getElementById('sharingDot');
   const sharingText = document.getElementById('sharingText');
   const partyStatus = document.getElementById('partyStatus');
+  const partyInvitePicker = document.getElementById('partyInvitePicker');
+  const leavePartyBtn = document.getElementById('leavePartyBtn');
   if(!status || !auth) return;
 
   status.textContent = ready ? (signedIn ? '已連線，可以和好友同步位置' : 'Firebase 已設定，請登入') : '尚未設定 Firebase，連線功能先以離線狀態顯示';
@@ -654,6 +672,9 @@ function renderOnline(){
   shareBtn.textContent = onlineState.sharing ? '停止分享' : '開始分享';
   sharingDot.classList.toggle('on', !!onlineState.sharing);
   sharingText.textContent = onlineState.sharing ? `分享中${onlineState.lastSharedAt ? '・' + timeAgo(onlineState.lastSharedAt) : ''}` : '尚未分享位置';
+  if(leavePartyBtn){
+    leavePartyBtn.textContent = onlineState.party?.hostUid === onlineState.user?.uid ? '解散小隊' : '離開小隊';
+  }
 
   if(!signedIn){
     list.className = 'empty-online';
@@ -665,6 +686,8 @@ function renderOnline(){
     list.className = '';
     list.innerHTML = onlineState.friends.map(friendCardHtml).join('');
   }
+
+  renderPartyInvitePicker(partyInvitePicker, signedIn);
 
   if(onlineState.party){
     partyStatus.className = 'empty-online';
@@ -692,7 +715,40 @@ function renderOnline(){
   }
 }
 
+function syncInviteSelection(){
+  const friendIds = new Set((onlineState.friends || []).map((friend) => friend.uid).filter(Boolean));
+  selectedInviteUids = new Set([...selectedInviteUids].filter((uid) => friendIds.has(uid)));
+  if(!inviteSelectionTouched){
+    selectedInviteUids = new Set(friendIds);
+  }
+}
+
+function renderPartyInvitePicker(container, signedIn){
+  if(!container) return;
+  syncInviteSelection();
+  if(!signedIn || onlineState.party || !onlineState.friends.length){
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = `
+    <div class="party-picker">
+      <div class="party-picker-title">選擇要邀請的好友</div>
+      ${onlineState.friends.map((friend) => `
+        <label class="party-choice">
+          <input type="checkbox" ${selectedInviteUids.has(friend.uid) ? 'checked' : ''} onchange="toggleInviteFriend('${escapeHtml(friend.uid)}', this.checked)">
+          <div class="friend-avatar">${avatarText(friend.displayName || '友')}</div>
+          <div class="friend-main">
+            <div class="friend-name">${escapeHtml(friend.displayName || '好友')}</div>
+            <div class="friend-meta">${friend.location ? '已分享位置' : '尚未分享位置'}</div>
+          </div>
+        </label>
+      `).join('')}
+    </div>
+  `;
+}
+
 function friendCardHtml(friend){
+  const distance = friendDistanceText(friend);
   return `
     <div class="friend-card">
       <div class="friend-avatar">${avatarText(friend.displayName || '友')}</div>
@@ -700,13 +756,20 @@ function friendCardHtml(friend){
         <div class="friend-name">${escapeHtml(friend.displayName || '好友')}</div>
         <div class="friend-meta">${friend.location ? `更新 ${timeAgo(friend.location.updatedAt)}` : '尚未分享位置'}</div>
       </div>
-      <div class="friend-distance">${friend.location ? distanceText(friend.location.lat, friend.location.lng) : '--'}</div>
+      <div class="friend-distance">${escapeHtml(distance)}</div>
     </div>
   `;
 }
 
-function distanceText(lat, lng){
-  const d = haversineSteps(HERE.lat, HERE.lng, Number(lat), Number(lng));
+function friendDistanceText(friend){
+  if(!onlineState.sharing || !onlineState.myLocation) return '待你分享';
+  if(!friend.location) return '待對方分享';
+  const d = haversineSteps(
+    Number(onlineState.myLocation.lat),
+    Number(onlineState.myLocation.lng),
+    Number(friend.location.lat),
+    Number(friend.location.lng)
+  );
   return d.meters >= 1000 ? `${(d.meters / 1000).toFixed(1)} km` : `${d.meters} m`;
 }
 
@@ -765,19 +828,58 @@ function toggleLocationSharing(){
   renderOnline();
 }
 
-function sendLocationOnce(){
+function currentPosition(options = {enableHighAccuracy:true, maximumAge:0, timeout:15000}){
+  return new Promise((resolve, reject) => {
+    if(!window.isSecureContext){
+      reject(new Error('定位需要 HTTPS 或 localhost'));
+      return;
+    }
+    if(!navigator.geolocation){
+      reject(new Error('這台裝置不支援定位'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+}
+
+async function sendLocationOnce(){
   if(!onlineState.user){ toast('請先登入'); return; }
-  const payload = { lat: HERE.lat, lng: HERE.lng, accuracy: null, updatedAt: Date.now() };
-  window.FootprintOnline?.updateLocation?.(payload);
+  try {
+    const pos = await currentPosition();
+    if(!pos.coords || !Number.isFinite(pos.coords.latitude) || !Number.isFinite(pos.coords.longitude)){
+      throw new Error('裝置沒有回傳有效定位');
+    }
+    HERE.lat = pos.coords.latitude;
+    HERE.lng = pos.coords.longitude;
+    recomputeDistances();
+    renderList();
+    if(map){ map.setCenter({lat:HERE.lat, lng:HERE.lng}); placeUserMarker(); renderMapMarkers(); renderFriendMarkers(); }
+    document.getElementById('mapBadge').textContent='📍 已分享你目前的位置';
+    const payload = { lat: HERE.lat, lng: HERE.lng, accuracy: pos.coords.accuracy ?? null, updatedAt: Date.now() };
+    window.FootprintOnline?.updateLocation?.(payload);
+  } catch (error) {
+    onlineState.sharing = false;
+    renderOnline();
+    toast(error?.message || '無法取得位置，沒有分享');
+  }
 }
 
 function createWalkParty(){
   if(!onlineState.user){ toast('請先登入'); return; }
-  window.FootprintOnline?.createParty?.();
+  if(onlineState.party){ toast('你已在小隊中，需先退出才能建立新的小隊'); return; }
+  const inviteUids = [...selectedInviteUids];
+  window.FootprintOnline?.createParty?.(inviteUids);
+}
+
+function toggleInviteFriend(uid, checked){
+  inviteSelectionTouched = true;
+  if(checked) selectedInviteUids.add(uid);
+  else selectedInviteUids.delete(uid);
 }
 
 function joinWalkParty(partyId){
   if(!onlineState.user){ toast('請先登入'); return; }
+  if(onlineState.party && onlineState.party.id !== partyId){ toast('你已在小隊中，請先退出目前小隊'); return; }
   window.FootprintOnline?.joinParty?.(partyId);
 }
 
@@ -807,7 +909,7 @@ function renderFriendMarkers(){
     });
     marker.addListener('click', () => {
       showTab('online');
-      toast(`${friend.displayName || '好友'} 距離你 ${distanceText(friend.location.lat, friend.location.lng)}`);
+      toast(`${friend.displayName || '好友'}：${friendDistanceText(friend)}`);
     });
     return marker;
   });
@@ -815,6 +917,38 @@ function renderFriendMarkers(){
 
 /* ================= 真正的 Google Maps（需要你自己的 API 金鑰） ================= */
 let map, userMarker, mapMarkers = [], friendMarkers = [];
+let lastMapTouchAt = 0;
+
+function resizeMapSoon(){
+  setTimeout(() => {
+    if(map && window.google?.maps){
+      google.maps.event.trigger(map, 'resize');
+      map.setCenter({lat: HERE.lat, lng: HERE.lng});
+      renderFriendMarkers();
+    }
+  }, 80);
+}
+
+function toggleMapFullscreen(force){
+  const wrap = document.getElementById('mapWrap');
+  if(!wrap) return;
+  const next = typeof force === 'boolean' ? force : !wrap.classList.contains('map-fullscreen');
+  wrap.classList.toggle('map-fullscreen', next);
+  document.body.style.overflow = next ? 'hidden' : '';
+  resizeMapSoon();
+}
+
+function handleMapTouch(event){
+  if(event.target?.closest('button')) return;
+  const now = Date.now();
+  if(now - lastMapTouchAt < 320){
+    event.preventDefault();
+    toggleMapFullscreen();
+    lastMapTouchAt = 0;
+    return;
+  }
+  lastMapTouchAt = now;
+}
 
 // Maps JavaScript API 載入完成後，Google 會自動呼叫這個 callback（見 <head> 裡的 script 標籤）
 function initMap(){
@@ -1038,7 +1172,7 @@ async function locateMe(){
     }
     HERE.lat=pos.coords.latitude; HERE.lng=pos.coords.longitude;
     recomputeDistances(); renderList();
-    if(map){ map.setCenter({lat:HERE.lat, lng:HERE.lng}); placeUserMarker(); renderMapMarkers(); }
+    if(map){ map.setCenter({lat:HERE.lat, lng:HERE.lng}); placeUserMarker(); renderMapMarkers(); renderFriendMarkers(); }
     document.getElementById('mapBadge').textContent='📍 已定位到你目前的位置';
     btn.textContent='🎯 定位我';
     if(onlineState.sharing) sendLocationOnce();
@@ -1057,7 +1191,7 @@ function locateMe(){
   navigator.geolocation.getCurrentPosition(pos=>{
     HERE.lat=pos.coords.latitude; HERE.lng=pos.coords.longitude;
     recomputeDistances(); renderList();
-    if(map){ map.setCenter({lat:HERE.lat, lng:HERE.lng}); placeUserMarker(); renderMapMarkers(); }
+    if(map){ map.setCenter({lat:HERE.lat, lng:HERE.lng}); placeUserMarker(); renderMapMarkers(); renderFriendMarkers(); }
     document.getElementById('mapBadge').textContent='📍 已定位到你目前的位置';
     document.getElementById('locateNote').textContent='距離已依你目前的實際位置重新計算，附近店家改用 Places API 查詢';
     btn.textContent='🎯 定位我';
@@ -1760,7 +1894,7 @@ if(!configured){
     currentUser = user;
     clearOnlineListeners();
     if(!user){
-      emit({ user: null, friendCode: '', friends: [], party: null, partyInvites: [], sharing: false, status: 'signed-out' });
+      emit({ user: null, friendCode: '', friends: [], party: null, partyInvites: [], myLocation: null, sharing: false, status: 'signed-out' });
       return;
     }
     emit({
@@ -1838,10 +1972,19 @@ if(!configured){
           updatedAt: Date.now(),
         });
         onDisconnect(locationRef).remove();
-        emit({ sharing: true, lastSharedAt: Date.now() });
+        emit({
+          sharing: true,
+          myLocation: {
+            lat: Number(payload.lat),
+            lng: Number(payload.lng),
+            accuracy: payload.accuracy ?? null,
+            updatedAt: Date.now(),
+          },
+          lastSharedAt: Date.now()
+        });
         window.toast?.('位置已同步給好友');
       } catch (error) {
-        emit({ sharing: false });
+        emit({ sharing: false, myLocation: null });
         window.toast?.(`位置分享失敗：${firebaseMessage(error)}`);
       }
     },
@@ -1849,18 +1992,25 @@ if(!configured){
       if(!currentUser) return;
       try {
         if(locationRef) await remove(locationRef);
-        emit({ sharing: false, lastSharedAt: null });
+        emit({ sharing: false, myLocation: null, lastSharedAt: null });
         window.toast?.('已停止分享位置');
       } catch (error) {
         window.toast?.(`停止分享失敗：${firebaseMessage(error)}`);
       }
     },
-    async createParty(){
+    async createParty(inviteUids = []){
       if(!currentUser) return;
       try {
+        const currentPartySnap = await get(ref(db, `userParties/${currentUser.uid}`));
+        if(currentPartySnap.exists() || activePartyId || onlineState.party){
+          window.toast?.('你已在小隊中，需先退出或由建立人解散後才能建立新的小隊');
+          return;
+        }
         const partyId = currentUser.uid;
         const displayName = onlineState.user?.displayName || currentUser.displayName || '玩家';
         const friends = onlineState.friends || [];
+        const selected = new Set(Array.isArray(inviteUids) ? inviteUids : []);
+        const inviteFriends = selected.size ? friends.filter((friend) => selected.has(friend.uid)) : [];
         const data = {
           id: partyId,
           hostUid: currentUser.uid,
@@ -1875,7 +2025,7 @@ if(!configured){
           [`parties/${partyId}`]: data,
           [`userParties/${currentUser.uid}`]: { partyId, role: 'host', joinedAt: Date.now() },
         };
-        friends.forEach((friend) => {
+        inviteFriends.forEach((friend) => {
           if(friend.uid){
             updates[`partyInvites/${friend.uid}/${partyId}`] = {
               partyId,
@@ -1888,7 +2038,7 @@ if(!configured){
         });
         await update(ref(db), updates);
         emit({ party: data });
-        window.toast?.(friends.length ? `散步小隊已建立，已邀請 ${friends.length} 位好友` : '散步小隊已建立');
+        window.toast?.(inviteFriends.length ? `散步小隊已建立，已邀請 ${inviteFriends.length} 位好友` : '散步小隊已建立，尚未邀請好友');
       } catch (error) {
         window.toast?.(`建立小隊失敗：${firebaseMessage(error)}`);
       }
@@ -1898,6 +2048,12 @@ if(!configured){
       const targetPartyId = String(partyId || '').trim();
       if(!targetPartyId) return window.toast?.('找不到小隊邀請');
       try {
+        const currentPartySnap = await get(ref(db, `userParties/${currentUser.uid}`));
+        const currentPartyId = currentPartySnap.val()?.partyId || activePartyId || onlineState.party?.id || null;
+        if(currentPartyId && currentPartyId !== targetPartyId){
+          window.toast?.('你已在小隊中，請先退出目前小隊');
+          return;
+        }
         const displayName = onlineState.user?.displayName || currentUser.displayName || '玩家';
         await update(ref(db), {
           [`parties/${targetPartyId}/members/${currentUser.uid}`]: { uid: currentUser.uid, displayName, joinedAt: Date.now() },
@@ -1914,10 +2070,18 @@ if(!configured){
       try {
         const partyId = activePartyId || onlineState.party?.id || currentUser.uid;
         if(onlineState.party?.hostUid === currentUser.uid || partyId === currentUser.uid){
-          await update(ref(db), {
+          const memberIds = Object.keys(onlineState.party?.members || {});
+          const updates = {
             [`parties/${partyId}`]: null,
             [`userParties/${currentUser.uid}`]: null,
+          };
+          memberIds.forEach((memberUid) => {
+            updates[`userParties/${memberUid}`] = null;
           });
+          (onlineState.friends || []).forEach((friend) => {
+            if(friend.uid) updates[`partyInvites/${friend.uid}/${partyId}`] = null;
+          });
+          await update(ref(db), updates);
         } else {
           await update(ref(db), {
             [`parties/${partyId}/members/${currentUser.uid}`]: null,
