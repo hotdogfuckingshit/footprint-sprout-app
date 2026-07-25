@@ -1,7 +1,7 @@
 {
   "scripts": {
     "dev": "node server.mjs",
-    "build": "vite build",
+    "build": "vite build && node scripts/prepare-sites-build.mjs",
     "preview": "NODE_ENV=production node server.mjs"
   },
   "dependencies": {
