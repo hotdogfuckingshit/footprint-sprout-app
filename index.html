@@ -78,10 +78,10 @@ body{
 .screens{flex:1; position:relative; overflow:hidden;}
 .screen{
   position:absolute; inset:0; overflow-y:auto; padding-bottom:100px;
-  opacity:0; pointer-events:none; transform:translateY(8px);
-  transition:opacity .22s ease, transform .22s ease;
+  opacity:0; visibility:hidden; pointer-events:none; transform:translateY(8px);
+  transition:opacity .22s ease, transform .22s ease, visibility 0s linear .22s;
 }
-.screen.active{opacity:1; pointer-events:auto; transform:translateY(0);}
+.screen.active{opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0); transition-delay:0s;}
 .screen::-webkit-scrollbar{display:none;}
 
 .section-title{padding:16px 18px 6px; font-size:13px; font-weight:800; color:var(--ink-soft); letter-spacing:1px;}
@@ -231,8 +231,18 @@ body{
 .modal-overlay.open{display:flex;}
 .modal-card{background:var(--paper); width:100%; border-radius:26px 26px 0 0; padding:22px; max-height:80%; overflow-y:auto;}
 .modal-card h3{margin:0 0 10px; font-size:17px; color:var(--ink);}
-.upload-box{border:2.5px dashed var(--line); border-radius:18px; padding:26px 14px; text-align:center; color:var(--ink-soft); font-size:12.5px; margin-bottom:14px; background:var(--sky);}
-.upload-box .em{font-size:30px; display:block; margin-bottom:8px;}
+.upload-box{border:2.5px dashed var(--line); border-radius:18px; padding:0; text-align:center; color:var(--ink-soft); font-size:12.5px; margin-bottom:14px; background:var(--sky); overflow:hidden;}
+.upload-box input{position:absolute; opacity:0; width:1px; height:1px; pointer-events:none;}
+.upload-prompt{display:block; padding:26px 14px; cursor:pointer;}
+.upload-prompt .em{font-size:30px; display:block; margin-bottom:8px;}
+.upload-box.has-image{border-style:solid; background:#fff;}
+.upload-preview{display:none; position:relative; min-height:152px; background:#EAF6FF;}
+.upload-box.has-image .upload-preview{display:block;}
+.upload-box.has-image .upload-prompt{display:none;}
+.upload-preview img{width:100%; height:158px; object-fit:cover; display:block;}
+.upload-meta{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; color:var(--ink); font-size:12px; font-weight:800; background:#fff;}
+.upload-meta span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.upload-color{width:24px; height:24px; border-radius:999px; border:2px solid #fff; box-shadow:0 0 0 1px rgba(28,37,65,0.15); flex:0 0 auto;}
 .mode-row{display:flex; gap:8px; margin-bottom:16px;}
 .mode-chip{flex:1; text-align:center; padding:10px 4px; border-radius:14px; background:var(--sky); font-size:11.5px; font-weight:800; color:var(--ink-soft); border:2px solid transparent;}
 .mode-chip.on{border-color:var(--grape); color:var(--grape); background:#F1EBFF;}
@@ -1074,6 +1084,106 @@ function confirmGenerate(){
   showTab('pet');
 }
 function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
+
+let uploadedPetSource = null;
+
+function openGenerate(){
+  genMode='keep';
+  uploadedPetSource = null;
+  document.getElementById('modalContent').innerHTML = `
+    <h3>生成新寵物</h3>
+    <div class="upload-box" id="petUploadBox">
+      <input id="petUploadInput" data-testid="pet-upload-input" type="file" accept="image/*" onchange="handlePetUpload(event)">
+      <label class="upload-prompt" for="petUploadInput">
+        <span class="em">🖼️</span>
+        上傳任何照片，作為新寵物的靈感來源
+      </label>
+      <label class="upload-preview" for="petUploadInput">
+        <img id="petUploadPreview" alt="上傳照片預覽">
+        <div class="upload-meta">
+          <span id="petUploadName">尚未選擇照片</span>
+          <i class="upload-color" id="petUploadColor"></i>
+        </div>
+      </label>
+    </div>
+    <div class="mode-row">
+      <div class="mode-chip on" id="m-keep" onclick="setGenMode('keep')">保留特徵</div>
+      <div class="mode-chip" id="m-mix" onclick="setGenMode('mix')">奇想融合</div>
+      <div class="mode-chip" id="m-surprise" onclick="setGenMode('surprise')">完全驚喜</div>
+    </div>
+    <div class="reward-row"><div class="reward-chip">花費 💠 100 枚記憶碎片</div></div>
+    <button class="btn btn-primary" id="generatePetButton" onclick="confirmGenerate()">開始生成</button>
+    <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function handlePetUpload(event){
+  const file = event.target.files && event.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){
+    toast('請選擇圖片檔');
+    event.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = String(reader.result || '');
+    const preview = document.getElementById('petUploadPreview');
+    preview.onload = () => extractPetImageColor(preview, file.name, dataUrl);
+    preview.src = dataUrl;
+  };
+  reader.onerror = () => toast('讀取照片失敗，請重新選擇');
+  reader.readAsDataURL(file);
+}
+
+function extractPetImageColor(image, fileName, dataUrl){
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const size = 48;
+  canvas.width = size;
+  canvas.height = size;
+  ctx.drawImage(image, 0, 0, size, size);
+  const pixels = ctx.getImageData(0, 0, size, size).data;
+  let r = 0, g = 0, b = 0, count = 0;
+  for(let i = 0; i < pixels.length; i += 4){
+    const alpha = pixels[i + 3];
+    if(alpha < 120) continue;
+    const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+    if(brightness < 18) continue;
+    r += pixels[i];
+    g += pixels[i + 1];
+    b += pixels[i + 2];
+    count++;
+  }
+  const color = count ? rgbToHex(Math.round(r / count), Math.round(g / count), Math.round(b / count)) : '#FF8A6B';
+  uploadedPetSource = { fileName, color, dataUrl };
+  document.getElementById('petUploadBox').classList.add('has-image');
+  document.getElementById('petUploadName').textContent = fileName;
+  document.getElementById('petUploadColor').style.background = color;
+}
+
+function rgbToHex(r, g, b){
+  return '#' + [r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+function confirmGenerate(){
+  if(!uploadedPetSource){
+    toast('請先上傳一張照片');
+    return;
+  }
+  if(state.fragments<100){
+    toast('記憶碎片不足，先去探索或取得更多碎片');
+    return;
+  }
+  state.fragments-=100;
+  state.petColor = uploadedPetSource.color;
+  document.getElementById('petName').textContent = uploadedPetSource.fileName.replace(/\.[^.]+$/, '').slice(0, 8) || '新寵物';
+  renderTop();
+  closeModal();
+  toast('已依照片主色生成新寵物');
+  showTab('pet');
+}
 
 /* ================= INIT ================= */
 renderFilters();
