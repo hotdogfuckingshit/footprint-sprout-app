@@ -212,6 +212,9 @@ body{
 .profile-avatar{width:70px;height:70px;border-radius:22px; margin:0 auto 10px; background:linear-gradient(135deg,var(--coral),var(--sun)); display:flex;align-items:center;justify-content:center; font-size:32px;}
 .profile-card h3{margin:0 0 2px; font-size:16px; color:var(--ink);}
 .profile-card p{margin:0; font-size:12px; color:var(--ink-soft);}
+.profile-edit{margin-top:14px; display:flex; flex-direction:column; gap:8px;}
+.profile-edit input{width:100%; border:1px solid var(--line); border-radius:14px; padding:12px 13px; font:inherit; font-size:16px; color:var(--ink); background:#F8FCFF;}
+.profile-login-note{margin-top:12px; color:var(--ink-soft); font-size:12.5px; line-height:1.6;}
 .frag-big{margin:16px 16px 6px; background:linear-gradient(135deg,#7C5CFC,#9B7BFF); border-radius:22px; padding:18px; color:#fff; box-shadow:var(--shadow);}
 .frag-big .row{display:flex; justify-content:space-between; align-items:center;}
 .frag-big .amt{font-size:30px; font-weight:800;}
@@ -234,8 +237,8 @@ body{
 .online-panel{margin:10px 16px; background:var(--paper); border-radius:20px; padding:14px; box-shadow:var(--shadow);}
 .online-panel h3{margin:0 0 10px; font-size:15px; color:var(--ink);}
 .online-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
-.online-input-row{display:flex; gap:8px; margin-top:8px;}
-.online-input-row input{min-width:0; flex:1; border:1px solid var(--line); border-radius:13px; padding:11px 12px; font:inherit; font-size:12.5px; color:var(--ink); background:#F8FCFF;}
+.online-input-row{display:grid; grid-template-columns:minmax(0,1fr) 74px; gap:8px; margin-top:10px; align-items:center;}
+.online-input-row input{min-width:0; width:100%; border:1px solid var(--line); border-radius:14px; padding:13px 14px; font:inherit; font-size:16px; color:var(--ink); background:#F8FCFF; letter-spacing:.8px; text-transform:uppercase;}
 .friend-card{display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line);}
 .friend-card:first-child{border-top:0;}
 .friend-avatar{width:40px; height:40px; border-radius:14px; background:linear-gradient(135deg,var(--sun),var(--coral)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900;}
@@ -447,9 +450,10 @@ body{
     <!-- ===== PROFILE SCREEN ===== -->
     <div class="screen" id="screen-me">
       <div class="profile-card">
-        <div class="profile-avatar">🧑‍🦱</div>
-        <h3>探索者・小雨</h3>
-        <p>西屯區居民・已加入 42 天</p>
+        <div class="profile-avatar" id="profileAvatar">?</div>
+        <h3 id="profileName">請先登入</h3>
+        <p id="profileMeta">登入後可以同步好友、定位分享與散步小隊。</p>
+        <div class="profile-edit" id="profileEdit"></div>
       </div>
       <div class="frag-big">
         <div class="row"><div><div class="amt num" id="fragBig">42</div><div class="lab">記憶碎片</div></div><div style="font-size:36px;">💠</div></div>
@@ -574,6 +578,7 @@ let onlineState = {
   friendCode: '',
   friends: [],
   party: null,
+  partyInvites: [],
   sharing: false,
   lastSharedAt: null,
 };
@@ -586,9 +591,36 @@ function firebaseConfigured(){
 function receiveOnlineSnapshot(snapshot){
   onlineState = {...onlineState, ...snapshot};
   renderOnline();
+  renderProfile();
   renderFriendMarkers();
 }
 window.receiveOnlineSnapshot = receiveOnlineSnapshot;
+
+function renderProfile(){
+  const avatar = document.getElementById('profileAvatar');
+  const name = document.getElementById('profileName');
+  const meta = document.getElementById('profileMeta');
+  const edit = document.getElementById('profileEdit');
+  if(!avatar || !name || !meta || !edit) return;
+  if(!onlineState.user){
+    avatar.textContent = '?';
+    name.textContent = '請先登入';
+    meta.textContent = '登入後可以設定使用者名稱、同步好友定位與散步小隊。';
+    edit.innerHTML = `
+      <div class="profile-login-note">請到「連線」分頁使用 Google 登入。</div>
+      <button class="btn btn-primary" onclick="showTab('online')">前往登入</button>
+    `;
+    return;
+  }
+  const displayName = onlineState.user.displayName || '玩家';
+  avatar.textContent = avatarText(displayName);
+  name.textContent = displayName;
+  meta.textContent = onlineState.user.email || '已登入';
+  edit.innerHTML = `
+    <input id="profileNameInput" maxlength="18" value="${escapeHtml(displayName)}" placeholder="輸入使用者名稱">
+    <button class="btn btn-primary" onclick="saveProfileName()">儲存使用者名稱</button>
+  `;
+}
 
 function renderOnline(){
   const ready = firebaseConfigured();
@@ -635,9 +667,25 @@ function renderOnline(){
   }
 
   if(onlineState.party){
-    const members = onlineState.party.memberCount || Math.max(1, onlineState.friends.length + 1);
     partyStatus.className = 'empty-online';
-    partyStatus.textContent = `小隊進行中：${members} 人在線，目標是一起完成今天的散步。`;
+    const members = Object.values(onlineState.party.members || {});
+    partyStatus.innerHTML = `
+      <b>小隊進行中</b><br>
+      ${escapeHtml(onlineState.party.goal || '一起散步')}<br>
+      成員：${members.map((m) => escapeHtml(m.displayName || '玩家')).join('、') || '只有你'}
+    `;
+  } else if(onlineState.partyInvites.length){
+    partyStatus.className = '';
+    partyStatus.innerHTML = onlineState.partyInvites.map((invite) => `
+      <div class="friend-card">
+        <div class="friend-avatar">${avatarText(invite.hostName || '隊')}</div>
+        <div class="friend-main">
+          <div class="friend-name">${escapeHtml(invite.hostName || '好友')} 邀請你散步</div>
+          <div class="friend-meta">${escapeHtml(invite.goal || '一起散步')}</div>
+        </div>
+        <button class="btn btn-primary" onclick="joinWalkParty('${escapeHtml(invite.partyId)}')">加入</button>
+      </div>
+    `).join('');
   } else {
     partyStatus.className = 'empty-online';
     partyStatus.textContent = signedIn ? '尚未建立小隊。建立後，好友清單會變成一起散步的小隊看板。' : '登入後可以建立散步小隊。';
@@ -688,6 +736,14 @@ function onlineSignOut(){
   window.FootprintOnline?.signOut?.();
 }
 
+function saveProfileName(){
+  if(!onlineState.user){ toast('請先登入'); return; }
+  const input = document.getElementById('profileNameInput');
+  const displayName = input.value.trim();
+  if(displayName.length < 2){ toast('使用者名稱至少 2 個字'); return; }
+  window.FootprintOnline?.updateDisplayName?.(displayName);
+}
+
 function addFriendByCode(){
   const input = document.getElementById('friendCodeInput');
   const code = input.value.trim().toUpperCase();
@@ -718,6 +774,11 @@ function sendLocationOnce(){
 function createWalkParty(){
   if(!onlineState.user){ toast('請先登入'); return; }
   window.FootprintOnline?.createParty?.();
+}
+
+function joinWalkParty(partyId){
+  if(!onlineState.user){ toast('請先登入'); return; }
+  window.FootprintOnline?.joinParty?.(partyId);
 }
 
 function leaveWalkParty(){
@@ -760,9 +821,11 @@ function initMap(){
   map = new google.maps.Map(document.getElementById('map'), {
     center: {lat: HERE.lat, lng: HERE.lng},
     zoom: 14,
-    disableDefaultUI: true,
+    disableDefaultUI: false,
     zoomControl: true,
-    styles: [{elementType:'geometry', stylers:[{color:'#EAF6FF'}]}] // 簡單套個跟 App 一致的淺色調
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false
   });
   renderMapMarkers();
   setTimeout(fetchNearbyRealPlaces, 250);
@@ -1143,6 +1206,7 @@ function showTab(tab){
   if(tab==='pet') renderPet();
   if(tab==='book') renderBook();
   if(tab==='online') renderOnline();
+  if(tab==='me') renderProfile();
 }
 
 /* ================= TOAST ================= */
@@ -1530,17 +1594,19 @@ if(!configured){
   window.FootprintOnline = {
     signIn(){ window.toast?.('請先設定 Firebase 連線參數'); },
     signOut(){},
+    updateDisplayName(){ window.toast?.('請先設定 Firebase 連線參數'); },
     addFriendByCode(){ window.toast?.('請先設定 Firebase 連線參數'); },
     updateLocation(){},
     stopSharing(){},
     createParty(){ window.toast?.('請先設定 Firebase 連線參數'); },
+    joinParty(){ window.toast?.('請先設定 Firebase 連線參數'); },
     leaveParty(){},
   };
   window.receiveOnlineSnapshot?.({ configured: false, status: 'not-configured' });
 } else {
   const [
     { initializeApp },
-    { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut: firebaseSignOut },
+    { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut: firebaseSignOut, updateProfile },
     {
       getDatabase, ref, get, set, update, remove, onValue,
       query, orderByChild, equalTo, onDisconnect,
@@ -1556,8 +1622,13 @@ if(!configured){
   const db = getDatabase(app);
   const provider = new GoogleAuthProvider();
   let currentUser = null;
-  let friendUnsubs = [];
+  let friendsListUnsub = null;
+  let friendDetailUnsubs = [];
   let partyUnsub = null;
+  let partyInviteUnsub = null;
+  let userPartyUnsub = null;
+  let activePartyId = null;
+  let knownPartyInviteIds = new Set();
   let locationRef = null;
 
   const emit = (patch) => window.receiveOnlineSnapshot?.({ configured: true, ...patch });
@@ -1575,26 +1646,43 @@ if(!configured){
     const snap = await get(userRef);
     const existing = snap.val() || {};
     const friendCode = existing.friendCode || codeFromUid(user.uid);
+    const displayName = existing.displayName || user.displayName || '玩家';
     await update(userRef, {
       uid: user.uid,
-      displayName: user.displayName || '玩家',
+      displayName,
       email: user.email || '',
       photoURL: user.photoURL || '',
       friendCode,
       lastSeenAt: Date.now(),
     });
-    return { ...existing, friendCode };
+    return { ...existing, uid: user.uid, displayName, friendCode };
   }
 
-  function clearFriendListeners(){
-    friendUnsubs.forEach((unsub) => unsub());
-    friendUnsubs = [];
+  function clearFriendDetailListeners(){
+    friendDetailUnsubs.forEach((unsub) => unsub());
+    friendDetailUnsubs = [];
+  }
+
+  function clearOnlineListeners(){
+    if(friendsListUnsub) friendsListUnsub();
+    friendsListUnsub = null;
+    clearFriendDetailListeners();
+    if(partyUnsub) partyUnsub();
+    partyUnsub = null;
+    if(partyInviteUnsub) partyInviteUnsub();
+    partyInviteUnsub = null;
+    if(userPartyUnsub) userPartyUnsub();
+    userPartyUnsub = null;
+    activePartyId = null;
+    knownPartyInviteIds = new Set();
   }
 
   function subscribeFriends(uid){
+    if(friendsListUnsub) friendsListUnsub();
+    clearFriendDetailListeners();
     const friendsRef = ref(db, `friends/${uid}`);
-    const unsub = onValue(friendsRef, (snapshot) => {
-      clearFriendListeners();
+    friendsListUnsub = onValue(friendsRef, (snapshot) => {
+      clearFriendDetailListeners();
       const friendIds = Object.keys(snapshot.val() || {});
       const friendsById = {};
       if(!friendIds.length){
@@ -1615,31 +1703,64 @@ if(!configured){
           friendsById[friendUid] = { ...friendsById[friendUid], location: location || null };
           publish();
         });
-        friendUnsubs.push(userUnsub);
-        friendUnsubs.push(locationUnsub);
+        friendDetailUnsubs.push(userUnsub);
+        friendDetailUnsubs.push(locationUnsub);
       });
     }, (error) => {
       emit({ friends: [] });
       window.toast?.(`好友資料讀取失敗：${firebaseMessage(error)}`);
     });
-    friendUnsubs.push(unsub);
   }
 
   function subscribeParty(uid){
-    if(partyUnsub) partyUnsub();
-    const partyRef = ref(db, `parties/${uid}`);
-    partyUnsub = onValue(partyRef, (snapshot) => emit({ party: snapshot.val() || null }), (error) => {
+    if(userPartyUnsub) userPartyUnsub();
+    const userPartyRef = ref(db, `userParties/${uid}`);
+    userPartyUnsub = onValue(userPartyRef, (snapshot) => {
+      const link = snapshot.val();
+      activePartyId = link?.partyId || null;
+      if(partyUnsub) partyUnsub();
+      partyUnsub = null;
+      if(!activePartyId){
+        emit({ party: null });
+        return;
+      }
+      partyUnsub = onValue(ref(db, `parties/${activePartyId}`), (partySnap) => {
+        const party = partySnap.val();
+        emit({ party: party ? { id: activePartyId, ...party } : null });
+      }, (error) => {
+        emit({ party: null });
+        window.toast?.(`小隊資料讀取失敗：${firebaseMessage(error)}`);
+      });
+    }, (error) => {
+      activePartyId = null;
       emit({ party: null });
-      window.toast?.(`小隊資料讀取失敗：${firebaseMessage(error)}`);
+      window.toast?.(`小隊狀態讀取失敗：${firebaseMessage(error)}`);
+    });
+  }
+
+  function subscribePartyInvites(uid){
+    if(partyInviteUnsub) partyInviteUnsub();
+    const invitesRef = ref(db, `partyInvites/${uid}`);
+    partyInviteUnsub = onValue(invitesRef, (snapshot) => {
+      const invites = Object.entries(snapshot.val() || {}).map(([partyId, invite]) => ({ partyId, ...(invite || {}) }));
+      const newInvites = invites.filter((invite) => !knownPartyInviteIds.has(invite.partyId));
+      knownPartyInviteIds = new Set(invites.map((invite) => invite.partyId));
+      emit({ partyInvites: invites });
+      if(newInvites.length){
+        const latest = newInvites.reduce((a, b) => Number(a.createdAt || 0) > Number(b.createdAt || 0) ? a : b);
+        window.toast?.(`${latest.hostName || '好友'} 邀請你加入散步小隊`);
+      }
+    }, (error) => {
+      emit({ partyInvites: [] });
+      window.toast?.(`小隊邀請讀取失敗：${firebaseMessage(error)}`);
     });
   }
 
   onAuthStateChanged(auth, async (user) => {
     currentUser = user;
-    clearFriendListeners();
-    if(partyUnsub) partyUnsub();
+    clearOnlineListeners();
     if(!user){
-      emit({ user: null, friendCode: '', friends: [], party: null, sharing: false, status: 'signed-out' });
+      emit({ user: null, friendCode: '', friends: [], party: null, partyInvites: [], sharing: false, status: 'signed-out' });
       return;
     }
     emit({
@@ -1649,11 +1770,12 @@ if(!configured){
     });
     try {
       const profile = await ensureUser(user);
-      emit({ user: userView(user), friendCode: profile.friendCode, status: 'signed-in' });
+      emit({ user: { ...userView(user), displayName: profile.displayName }, friendCode: profile.friendCode, status: 'signed-in' });
       subscribeFriends(user.uid);
       subscribeParty(user.uid);
+      subscribePartyInvites(user.uid);
     } catch (error) {
-      emit({ user: userView(user), friendCode: codeFromUid(user.uid), friends: [], party: null, status: 'signed-in-db-error' });
+      emit({ user: userView(user), friendCode: codeFromUid(user.uid), friends: [], party: null, partyInvites: [], status: 'signed-in-db-error' });
       window.toast?.(`已登入，但資料庫尚未允許讀寫：${firebaseMessage(error)}`);
     }
   });
@@ -1668,6 +1790,22 @@ if(!configured){
     },
     async signOut(){
       await firebaseSignOut(auth);
+    },
+    async updateDisplayName(displayName){
+      if(!currentUser) return window.toast?.('請先登入');
+      const cleanName = String(displayName || '').trim().slice(0, 18);
+      if(cleanName.length < 2) return window.toast?.('使用者名稱至少 2 個字');
+      try {
+        await updateProfile(currentUser, { displayName: cleanName });
+        await update(ref(db, `users/${currentUser.uid}`), {
+          displayName: cleanName,
+          updatedAt: Date.now(),
+        });
+        emit({ user: { ...userView(currentUser), displayName: cleanName } });
+        window.toast?.('使用者名稱已更新');
+      } catch (error) {
+        window.toast?.(`儲存使用者名稱失敗：${firebaseMessage(error)}`);
+      }
     },
     async addFriendByCode(code){
       if(!currentUser) return window.toast?.('請先登入');
@@ -1720,18 +1858,72 @@ if(!configured){
     async createParty(){
       if(!currentUser) return;
       try {
-        const data = { hostUid: currentUser.uid, memberCount: 1, goal: '一起散步', startedAt: Date.now() };
-        await set(ref(db, `parties/${currentUser.uid}`), data);
+        const partyId = currentUser.uid;
+        const displayName = onlineState.user?.displayName || currentUser.displayName || '玩家';
+        const friends = onlineState.friends || [];
+        const data = {
+          id: partyId,
+          hostUid: currentUser.uid,
+          hostName: displayName,
+          goal: '一起散步',
+          startedAt: Date.now(),
+          members: {
+            [currentUser.uid]: { uid: currentUser.uid, displayName, joinedAt: Date.now() },
+          },
+        };
+        const updates = {
+          [`parties/${partyId}`]: data,
+          [`userParties/${currentUser.uid}`]: { partyId, role: 'host', joinedAt: Date.now() },
+        };
+        friends.forEach((friend) => {
+          if(friend.uid){
+            updates[`partyInvites/${friend.uid}/${partyId}`] = {
+              partyId,
+              hostUid: currentUser.uid,
+              hostName: displayName,
+              goal: data.goal,
+              createdAt: Date.now(),
+            };
+          }
+        });
+        await update(ref(db), updates);
         emit({ party: data });
-        window.toast?.('散步小隊已建立');
+        window.toast?.(friends.length ? `散步小隊已建立，已邀請 ${friends.length} 位好友` : '散步小隊已建立');
       } catch (error) {
         window.toast?.(`建立小隊失敗：${firebaseMessage(error)}`);
+      }
+    },
+    async joinParty(partyId){
+      if(!currentUser) return window.toast?.('請先登入');
+      const targetPartyId = String(partyId || '').trim();
+      if(!targetPartyId) return window.toast?.('找不到小隊邀請');
+      try {
+        const displayName = onlineState.user?.displayName || currentUser.displayName || '玩家';
+        await update(ref(db), {
+          [`parties/${targetPartyId}/members/${currentUser.uid}`]: { uid: currentUser.uid, displayName, joinedAt: Date.now() },
+          [`userParties/${currentUser.uid}`]: { partyId: targetPartyId, role: 'member', joinedAt: Date.now() },
+          [`partyInvites/${currentUser.uid}/${targetPartyId}`]: null,
+        });
+        window.toast?.('已加入散步小隊');
+      } catch (error) {
+        window.toast?.(`加入小隊失敗：${firebaseMessage(error)}`);
       }
     },
     async leaveParty(){
       if(!currentUser) return;
       try {
-        await remove(ref(db, `parties/${currentUser.uid}`));
+        const partyId = activePartyId || onlineState.party?.id || currentUser.uid;
+        if(onlineState.party?.hostUid === currentUser.uid || partyId === currentUser.uid){
+          await update(ref(db), {
+            [`parties/${partyId}`]: null,
+            [`userParties/${currentUser.uid}`]: null,
+          });
+        } else {
+          await update(ref(db), {
+            [`parties/${partyId}/members/${currentUser.uid}`]: null,
+            [`userParties/${currentUser.uid}`]: null,
+          });
+        }
         emit({ party: null });
         window.toast?.('已離開小隊');
       } catch (error) {

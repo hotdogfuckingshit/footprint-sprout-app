@@ -151,3 +151,104 @@ test('online tab switches to signed-in UI when auth snapshot arrives', async ({ 
   await page.locator('#shareLocationBtn').click();
   await expect(page.locator('#sharingText')).toContainText('分享中');
 });
+
+test('profile tab prompts before login and lets signed-in users change display name', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="me"]').click();
+
+  await expect(page.locator('#profileName')).toHaveText('請先登入');
+  await expect(page.locator('#profileMeta')).toContainText('登入後');
+  await expect(page.locator('#profileEdit')).toContainText('前往登入');
+
+  await page.evaluate(() => {
+    window.FootprintOnline = {
+      updateDisplayName(displayName) {
+        window.receiveOnlineSnapshot({
+          user: {
+            uid: 'test-user',
+            displayName,
+            email: 'test@example.com',
+          },
+        });
+      },
+    };
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: {
+        uid: 'test-user',
+        displayName: '城市玩家',
+        email: 'test@example.com',
+      },
+      friendCode: 'ABC12345',
+      friends: [],
+      party: null,
+      partyInvites: [],
+      sharing: false,
+    });
+  });
+
+  await expect(page.locator('#profileName')).toHaveText('城市玩家');
+  await page.locator('#profileNameInput').fill('阿曼');
+  await page.getByRole('button', { name: '儲存使用者名稱' }).click();
+  await expect(page.locator('#profileName')).toHaveText('阿曼');
+});
+
+test('friend code input is readable on mobile and party invite can be accepted', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="online"]').click();
+  await page.evaluate(() => {
+    window.joinedParty = '';
+    window.FootprintOnline = {
+      joinParty(partyId) {
+        window.joinedParty = partyId;
+        window.receiveOnlineSnapshot({
+          partyInvites: [],
+          party: {
+            id: partyId,
+            goal: '一起散步',
+            members: {
+              host: { displayName: '好友A' },
+              me: { displayName: '城市玩家' },
+            },
+          },
+        });
+      },
+    };
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: {
+        uid: 'test-user',
+        displayName: '城市玩家',
+        email: 'test@example.com',
+      },
+      friendCode: 'ABC12345',
+      friends: [],
+      party: null,
+      partyInvites: [
+        {
+          partyId: 'party-1',
+          hostName: '好友A',
+          goal: '一起散步',
+          createdAt: Date.now(),
+        },
+      ],
+      sharing: false,
+    });
+  });
+
+  const inputMetrics = await page.locator('#friendCodeInput').evaluate((input) => {
+    const box = input.getBoundingClientRect();
+    const style = window.getComputedStyle(input);
+    return { width: box.width, fontSize: Number.parseFloat(style.fontSize) };
+  });
+  expect(inputMetrics.width).toBeGreaterThan(170);
+  expect(inputMetrics.fontSize).toBeGreaterThanOrEqual(16);
+
+  await expect(page.locator('#partyStatus')).toContainText('好友A 邀請你散步');
+  await page.locator('#partyStatus button').click();
+  await expect(page.locator('#partyStatus')).toContainText('小隊進行中');
+  await expect(page.locator('#partyStatus')).toContainText('城市玩家');
+  await expect.poll(() => page.evaluate(() => window.joinedParty)).toBe('party-1');
+});

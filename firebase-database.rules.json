@@ -22,9 +22,23 @@
       }
     },
     "parties": {
+      ".read": "auth != null",
+      "$partyId": {
+        ".write": "auth != null"
+      }
+    },
+    "userParties": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "partyInvites": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$partyId": {
+          ".write": "auth != null"
+        }
       }
     }
   }
