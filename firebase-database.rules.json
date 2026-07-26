@@ -46,7 +46,7 @@
     "userParties": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid"
+        ".write": "auth != null && (auth.uid === $uid || (!newData.exists() && data.exists() && root.child('parties').child(data.child('partyId').val()).child('hostUid').val() === auth.uid))"
       }
     },
     "partyInvites": {

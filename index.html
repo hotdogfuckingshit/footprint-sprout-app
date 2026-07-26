@@ -2819,7 +2819,8 @@ if(!configured){
       if(!currentUser) return;
       try {
         const partyId = activePartyId || onlineState.party?.id || currentUser.uid;
-        if(onlineState.party?.hostUid === currentUser.uid || partyId === currentUser.uid){
+        const isHost = onlineState.party?.hostUid === currentUser.uid || partyId === currentUser.uid;
+        if(isHost){
           const memberIds = Object.keys(onlineState.party?.members || {});
           const updates = {
             [`parties/${partyId}`]: null,
@@ -2839,7 +2840,7 @@ if(!configured){
           });
         }
         emit({ party: null });
-        window.toast?.('已離開小隊');
+        window.toast?.(isHost ? '已解散小隊' : '已離開小隊');
       } catch (error) {
         window.toast?.(`離開小隊失敗：${firebaseMessage(error)}`);
       }
