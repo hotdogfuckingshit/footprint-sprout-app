@@ -281,12 +281,6 @@ test('online tab switches to signed-in UI when auth snapshot arrives', async ({ 
 test('notification launch opens online tab and preselects share-back friend', async ({ page }) => {
   await page.goto('http://localhost:5173/?tab=online&action=shareBack&friend=friend-a');
   await page.evaluate(() => {
-    window.pushEnabled = false;
-    window.FootprintOnline = {
-      enablePushNotifications() {
-        window.pushEnabled = true;
-      },
-    };
     window.receiveOnlineSnapshot({
       configured: true,
       status: 'signed-in',
@@ -316,9 +310,8 @@ test('notification launch opens online tab and preselects share-back friend', as
   await expect(page.locator('#screen-online')).toHaveClass(/active/);
   await expect(page.locator('#shareTargetPicker input').nth(0)).toBeChecked();
   await expect(page.locator('#shareTargetPicker input').nth(1)).not.toBeChecked();
-  await expect(page.locator('#pushNotificationStatus')).toContainText('開啟通知');
-  await page.getByRole('button', { name: '開啟通知' }).click();
-  await expect.poll(() => page.evaluate(() => window.pushEnabled)).toBe(true);
+  await expect(page.locator('#authContent')).not.toContainText('開啟通知');
+  await expect(page.locator('#authContent')).not.toContainText('通知設定');
 });
 
 test('profile tab prompts before login and lets signed-in users change display name', async ({ page }) => {

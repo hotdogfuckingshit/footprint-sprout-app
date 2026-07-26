@@ -1330,11 +1330,6 @@ function renderOnline(){
       </div>
       <button class="btn btn-ghost" onclick="onlineSignOut()">登出</button>
     </div>
-    <div class="online-actions" style="margin-top:10px;">
-      <button class="btn btn-primary" onclick="enablePushNotifications()">開啟通知</button>
-      <button class="btn btn-ghost" onclick="showTab('online')">通知設定</button>
-    </div>
-    <div class="privacy-note" id="pushNotificationStatus">${escapeHtml(pushStatusText())}</div>
   ` : `
     <div class="empty-online">${ready ? '用 Google 登入後，就能產生好友碼並同步位置。' : '請先在 GitHub Secrets 補 Firebase 設定，部署後就會啟用。'}</div>
     <button class="btn btn-primary" style="margin-top:10px;" onclick="onlineQuickSignIn()">快速登入</button>
@@ -1390,15 +1385,6 @@ function renderOnline(){
     partyStatus.className = 'empty-online';
     partyStatus.textContent = signedIn ? '尚未建立小隊。建立後，好友清單會變成一起散步的小隊看板。' : '登入後可以建立散步小隊。';
   }
-}
-
-function pushStatusText(){
-  const push = onlineState.push || {};
-  if(!push.supported) return '此瀏覽器尚不支援網頁推播，請用 Safari/Chrome 開啟並安裝到主畫面。';
-  if(!push.configured) return '尚未設定 Firebase Cloud Messaging VAPID key，暫時只能在 App 內收到提醒。';
-  if(push.permission === 'denied') return '通知權限已被封鎖，請到瀏覽器或系統設定重新允許。';
-  if(push.enabled) return '通知已啟用：小隊邀請與好友位置分享會跳出系統通知。';
-  return '開啟通知後，好友邀請小隊或分享位置時，即使沒有停留在 App 內也能收到。';
 }
 
 function syncInviteSelection(){
@@ -1546,11 +1532,6 @@ function onlineQuickSignIn(){
 
 function onlineSignOut(){
   window.FootprintOnline?.signOut?.();
-}
-
-function enablePushNotifications(){
-  if(!onlineState.user){ toast('請先登入'); return; }
-  window.FootprintOnline?.enablePushNotifications?.();
 }
 
 function handleNotificationLaunch(){
