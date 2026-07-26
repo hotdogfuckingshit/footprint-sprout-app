@@ -393,7 +393,7 @@ body{
     </div>
     <div class="stats">
       <div class="pill frag"><span class="ico">💠</span><span class="num" id="topFrag">42</span></div>
-      <div class="pill step"><span class="ico">👣</span><span class="num" id="topStep">6,320</span></div>
+      <div class="pill step"><span class="ico">👣</span><span class="num" id="topStep">0</span></div>
     </div>
   </div>
 
@@ -433,8 +433,10 @@ body{
       </div>
 
       <div class="bar-block">
-        <div class="bar-label"><span>成長進度（步數）</span><span class="num" id="stepBarLabel">6,320 / 8,000</span></div>
-        <div class="bar-track"><div class="bar-fill step" id="stepBar" style="width:79%"></div></div>
+        <div class="bar-label"><span>今日真實步數</span><span class="num" id="stepBarLabel">0 / 8,000</span></div>
+        <div class="bar-track"><div class="bar-fill step" id="stepBar" style="width:0%"></div></div>
+        <div class="privacy-note" id="stepStatus">尚未啟用真實步數。手機瀏覽器需要你允許動作感測器。</div>
+        <button class="btn btn-primary" id="stepStartBtn" onclick="enableStepTracking()">啟用真實步數</button>
       </div>
       <div class="bar-block">
         <div class="bar-label"><span>親密度</span><span class="num" id="bondBarLabel">62%</span></div>
@@ -448,9 +450,10 @@ body{
       <div class="loc-card" style="cursor:default;">
         <div class="loc-thumb" style="background:#FFF1D6;">📜</div>
         <div class="loc-info">
-          <div class="loc-name">與主人一起走了 <span class="num" id="bioSteps">6,320</span> 步</div>
+          <div class="loc-name">今天與主人一起走了 <span class="num" id="bioSteps">0</span> 步</div>
           <div class="loc-meta">第一個到訪地點：<span id="bioFirst">尚未到訪</span></div>
           <div class="loc-meta">已收集 <span id="bioAcc">0</span> 件地點記憶物</div>
+          <div class="loc-meta" id="bioPlaces">還沒有到訪紀錄</div>
         </div>
       </div>
     </div>
@@ -617,16 +620,196 @@ const LOCATIONS = [
 /* ================= STATE ================= */
 let state = {
   fragments: 42,
-  steps: 6320,
+  steps: 0,
   stepGoal: 8000,
   bond: 62,
-  level: 3,
+  level: 1,
   petColor: '#FF8A6B',
   visited: {},        // id -> {date}
   equipped: [],        // accessory ids currently worn
   routeHistory: [],
   ordinarySkipDate: ''
 };
+
+const STEP_LOG_KEY = 'footprintStepLogs:v1';
+const VISIT_LOG_KEY = 'footprintVisitLogs:v1';
+let lastStepDate = todayKey();
+let stepTracker = {
+  enabled: false,
+  supported: false,
+  lastMagnitude: 0,
+  lastStepAt: 0,
+  saveTimer: null,
+  syncTimer: null,
+};
+
+function todayKey(date = new Date()){
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function readJsonStore(key, fallback){
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || '');
+    return parsed && typeof parsed === 'object' ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJsonStore(key, value){
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
+function loadLocalProgress(){
+  const stepLogs = readJsonStore(STEP_LOG_KEY, {});
+  const visitLogs = readJsonStore(VISIT_LOG_KEY, {});
+  const today = todayKey();
+  state.steps = Math.max(0, Number(stepLogs[today]?.steps || 0));
+  state.level = Math.max(1, Math.floor(state.steps / 3000) + 1);
+  state.visited = visitLogs.visited || {};
+  state.equipped = Array.isArray(visitLogs.equipped) ? visitLogs.equipped : state.equipped;
+}
+
+function persistStepLog(){
+  const date = todayKey();
+  const stepLogs = readJsonStore(STEP_LOG_KEY, {});
+  stepLogs[date] = {
+    date,
+    steps: Math.max(0, Math.floor(state.steps)),
+    updatedAt: Date.now(),
+  };
+  writeJsonStore(STEP_LOG_KEY, stepLogs);
+  scheduleStepBackendSync();
+}
+
+function persistVisitLog(){
+  writeJsonStore(VISIT_LOG_KEY, {
+    visited: state.visited,
+    equipped: state.equipped,
+    updatedAt: Date.now(),
+  });
+}
+
+function setTodaySteps(steps, source = 'motion'){
+  const today = todayKey();
+  if(today !== lastStepDate){
+    lastStepDate = today;
+    state.steps = 0;
+  }
+  const nextSteps = Math.max(0, Math.floor(Number(steps) || 0));
+  if(nextSteps === state.steps) return;
+  state.steps = nextSteps;
+  state.level = Math.max(1, Math.floor(state.steps / 3000) + 1);
+  renderTop();
+  if(document.getElementById('screen-pet')?.classList.contains('active')) renderPet();
+  persistStepLog();
+  updateStepStatus(source === 'reset' ? '已切換到新的一天，步數從 0 開始。' : `今日已記錄 ${state.steps.toLocaleString()} 步`);
+}
+
+function addRealSteps(count = 1){
+  setTodaySteps(state.steps + count, 'motion');
+}
+
+function checkStepDateRollover(){
+  const today = todayKey();
+  if(today !== lastStepDate){
+    lastStepDate = today;
+    setTodaySteps(0, 'reset');
+  }
+}
+
+function updateStepStatus(message){
+  const el = document.getElementById('stepStatus');
+  if(el) el.textContent = message;
+}
+
+function scheduleStepBackendSync(){
+  clearTimeout(stepTracker.syncTimer);
+  stepTracker.syncTimer = setTimeout(syncLocalStepLogsToBackend, 1200);
+}
+
+function syncLocalStepLogsToBackend(){
+  const logs = readJsonStore(STEP_LOG_KEY, {});
+  Object.values(logs).forEach((log) => {
+    if(log?.date) window.FootprintOnline?.syncSteps?.(log);
+  });
+}
+
+function handleMotionStep(event){
+  const acc = event.accelerationIncludingGravity || event.acceleration;
+  if(!acc) return;
+  const x = Number(acc.x || 0);
+  const y = Number(acc.y || 0);
+  const z = Number(acc.z || 0);
+  const magnitude = Math.sqrt(x*x + y*y + z*z);
+  const delta = Math.abs(magnitude - (stepTracker.lastMagnitude || magnitude));
+  const now = Date.now();
+  stepTracker.lastMagnitude = magnitude;
+  if(delta > 2.15 && now - stepTracker.lastStepAt > 330){
+    stepTracker.lastStepAt = now;
+    addRealSteps(1);
+  }
+}
+
+async function enableStepTracking(){
+  if(!window.isSecureContext){
+    updateStepStatus('真實步數需要 HTTPS 或 localhost。');
+    toast('真實步數需要 HTTPS');
+    return;
+  }
+  if(!('DeviceMotionEvent' in window)){
+    updateStepStatus('這台裝置或瀏覽器不支援動作感測器，無法用網頁直接計步。');
+    toast('此瀏覽器不支援真實步數');
+    return;
+  }
+  try {
+    if(typeof DeviceMotionEvent.requestPermission === 'function'){
+      const permission = await DeviceMotionEvent.requestPermission();
+      if(permission !== 'granted'){
+        updateStepStatus('你尚未允許動作感測器，因此不能計步。');
+        toast('動作感測器未允許');
+        return;
+      }
+    }
+    if(!stepTracker.enabled){
+      window.addEventListener('devicemotion', handleMotionStep);
+      stepTracker.enabled = true;
+    }
+    stepTracker.supported = true;
+    updateStepStatus('真實步數已啟用。頁面留在背景時會盡量持續記錄；被系統休眠或滑掉後會停止。');
+    toast('真實步數已啟用');
+    persistStepLog();
+  } catch (error) {
+    updateStepStatus(`真實步數啟用失敗：${error?.message || error}`);
+    toast('真實步數啟用失敗');
+  }
+}
+
+function recordVisitBackend(location){
+  window.FootprintOnline?.recordVisit?.({
+    id: location.id,
+    name: location.name,
+    type: location.type,
+    tag: location.tag,
+    lat: location.lat,
+    lng: location.lng,
+    visitedAt: Date.now(),
+    date: todayKey(),
+    daySteps: state.steps,
+  });
+}
+
+loadLocalProgress();
+setInterval(checkStepDateRollover, 60000);
+window.addEventListener('pagehide', persistStepLog);
+window.addEventListener('beforeunload', persistStepLog);
+document.addEventListener('visibilitychange', () => {
+  persistStepLog();
+  if(document.visibilityState === 'visible') checkStepDateRollover();
+});
 
 const QUEST_OPTIONS = {
   times: ['40 分鐘', '1 小時', '2 小時', '1 天'],
@@ -657,6 +840,7 @@ let questState = {
   selectedTheme: QUEST_OPTIONS.themes[0],
   selectedPace: QUEST_OPTIONS.paces[0],
   startedAt: null,
+  startedSteps: 0,
   timeLimitMin: 40,
   route: [],
   taskIndex: 0,
@@ -818,6 +1002,7 @@ function startBlindQuest(){
   questState.active = true;
   questState.completed = false;
   questState.startedAt = Date.now();
+  questState.startedSteps = state.steps;
   questState.taskIndex = 0;
   questState.phase = 'task';
   questState.validation = null;
@@ -943,10 +1128,9 @@ function completeBlindQuest(){
   clearInterval(questTimerId);
   const elapsedMin = Math.max(1, Math.round((Date.now() - questState.startedAt) / 60000));
   const completedInTime = elapsedMin <= questState.timeLimitMin;
-  const gainedSteps = questState.route.reduce((sum, loc)=>sum + Math.min(1400, Math.max(260, loc.distSteps)), 0);
+  const gainedSteps = Math.max(0, state.steps - Number(questState.startedSteps || state.steps));
   const reward = 10 + questState.route.length * 2 + (completedInTime ? 5 : 0);
   state.fragments += reward;
-  state.steps += gainedSteps;
   state.bond = Math.min(100, state.bond + 5);
   state.level = Math.max(state.level, Math.floor(state.steps / 3000) + 1);
   const finalLoc = questState.route.at(-1);
@@ -963,6 +1147,7 @@ function completeBlindQuest(){
   };
   state.routeHistory.unshift(entry);
   state.routeHistory = state.routeHistory.slice(0, 8);
+  window.FootprintOnline?.recordRoute?.(entry);
   questState.active = false;
   questState.completed = true;
   renderTop();
@@ -2090,6 +2275,8 @@ function finishCheckin(id){
   state.visited[id] = {date:new Date().toISOString().slice(0,10)};
   if(firstVisit && !state.equipped.includes(acc.id)) state.equipped.push(acc.id);
   state.fragments += 3;
+  persistVisitLog();
+  recordVisitBackend(l);
   renderTop();
   document.getElementById('sheetContent').innerHTML = `
     <div class="success-panel">
@@ -2143,7 +2330,6 @@ function makeDraggable(el, bounds){
   window.addEventListener('touchend',end);
 }
 function saveMemory(id){
-  state.steps += 320;
   state.bond = Math.min(100, state.bond+2);
   renderTop();
   toast('記憶合照已儲存到寵物履歷 📌');
@@ -2156,6 +2342,10 @@ function renderPet(){
   document.getElementById('petLevel').textContent = 'Lv.'+state.level;
   document.getElementById('stepBarLabel').textContent = state.steps.toLocaleString()+' / '+state.stepGoal.toLocaleString();
   document.getElementById('stepBar').style.width = Math.min(100, state.steps/state.stepGoal*100)+'%';
+  const stepBtn = document.getElementById('stepStartBtn');
+  if(stepBtn) stepBtn.textContent = stepTracker.enabled ? '真實步數記錄中' : '啟用真實步數';
+  if(stepBtn) stepBtn.disabled = !!stepTracker.enabled;
+  if(stepTracker.enabled) updateStepStatus(`真實步數記錄中・今日 ${state.steps.toLocaleString()} 步`);
   document.getElementById('bondBarLabel').textContent = state.bond+'%';
   document.getElementById('bondBar').style.width = state.bond+'%';
 
@@ -2175,6 +2365,12 @@ function renderPet(){
   document.getElementById('bioSteps').textContent = state.steps.toLocaleString();
   document.getElementById('bioFirst').textContent = visitedIds.length? LOCATIONS.find(l=>l.id===visitedIds[0]).name : '尚未到訪';
   document.getElementById('bioAcc').textContent = unlockedCount;
+  const places = visitedIds.map((id) => {
+    const loc = LOCATIONS.find((item) => item.id === id);
+    const date = state.visited[id]?.date || '';
+    return loc ? `${loc.name}${date ? '・' + date : ''}` : '';
+  }).filter(Boolean);
+  document.getElementById('bioPlaces').textContent = places.length ? `去過：${places.slice(0, 4).join('、')}${places.length > 4 ? '…' : ''}` : '還沒有到訪紀錄';
 }
 function wasEverUnlocked(accId){
   return Object.entries(ACC_MAP).some(([locId,a])=> a.id===accId && state.visited[locId]);
@@ -2207,6 +2403,7 @@ function renderTop(){
   document.getElementById('topFrag').textContent = state.fragments;
   document.getElementById('topStep').textContent = state.steps.toLocaleString();
   document.getElementById('fragBig').textContent = state.fragments;
+  persistStepLog();
 }
 
 /* ================= MODALS: topup / generate ================= */
@@ -2380,6 +2577,9 @@ if(!configured){
     addFriendByCode(){ window.toast?.('請先設定 Firebase 連線參數'); },
     updateLocation(){},
     stopSharing(){},
+    syncSteps(){},
+    recordVisit(){},
+    recordRoute(){},
     createParty(){ window.toast?.('請先設定 Firebase 連線參數'); },
     joinParty(){ window.toast?.('請先設定 Firebase 連線參數'); },
     leaveParty(){},
@@ -2410,6 +2610,8 @@ if(!configured){
   let partyInviteUnsub = null;
   let userPartyUnsub = null;
   let shareTargetsUnsub = null;
+  let stepLogUnsub = null;
+  let visitsUnsub = null;
   let activePartyId = null;
   let knownPartyInviteIds = new Set();
 
@@ -2457,6 +2659,10 @@ if(!configured){
     userPartyUnsub = null;
     if(shareTargetsUnsub) shareTargetsUnsub();
     shareTargetsUnsub = null;
+    if(stepLogUnsub) stepLogUnsub();
+    stepLogUnsub = null;
+    if(visitsUnsub) visitsUnsub();
+    visitsUnsub = null;
     activePartyId = null;
     knownPartyInviteIds = new Set();
   }
@@ -2566,6 +2772,33 @@ if(!configured){
     });
   }
 
+  function subscribeProgress(uid){
+    if(stepLogUnsub) stepLogUnsub();
+    if(visitsUnsub) visitsUnsub();
+    stepLogUnsub = onValue(ref(db, `stepLogs/${uid}/${todayKey()}`), (snapshot) => {
+      const remote = snapshot.val();
+      const remoteSteps = Math.max(0, Math.floor(Number(remote?.steps) || 0));
+      if(remoteSteps > state.steps){
+        setTodaySteps(remoteSteps, 'remote');
+      } else if(state.steps > remoteSteps){
+        syncLocalStepLogsToBackend();
+      }
+    });
+    visitsUnsub = onValue(ref(db, `visits/${uid}`), (snapshot) => {
+      const visits = snapshot.val() || {};
+      Object.entries(visits).forEach(([id, visit]) => {
+        state.visited[id] = { date: visit?.date || todayKey(new Date(Number(visit?.visitedAt || Date.now()))) };
+        const loc = LOCATIONS.find((item) => item.id === id);
+        const acc = loc ? accessoryFor(loc) : null;
+        if(acc && !state.equipped.includes(acc.id)) state.equipped.push(acc.id);
+      });
+      persistVisitLog();
+      renderList();
+      renderMapMarkers();
+      if(document.getElementById('screen-pet')?.classList.contains('active')) renderPet();
+    });
+  }
+
   onAuthStateChanged(auth, async (user) => {
     currentUser = user;
     clearOnlineListeners();
@@ -2585,6 +2818,8 @@ if(!configured){
       subscribeParty(user.uid);
       subscribePartyInvites(user.uid);
       subscribeShareTargets(user.uid);
+      subscribeProgress(user.uid);
+      syncLocalStepLogsToBackend();
     } catch (error) {
       emit({ user: userView(user), friendCode: codeFromUid(user.uid), friends: [], party: null, partyInvites: [], status: 'signed-in-db-error' });
       window.toast?.(`已登入，但資料庫尚未允許讀寫：${firebaseMessage(error)}`);
@@ -2746,6 +2981,70 @@ if(!configured){
         window.toast?.('已停止分享位置');
       } catch (error) {
         window.toast?.(`停止分享失敗：${firebaseMessage(error)}`);
+      }
+    },
+    async syncSteps(log){
+      if(!currentUser || !log?.date) return;
+      try {
+        const steps = Math.max(0, Math.floor(Number(log.steps) || 0));
+        await update(ref(db), {
+          [`stepLogs/${currentUser.uid}/${log.date}`]: {
+            date: log.date,
+            steps,
+            updatedAt: Date.now(),
+          },
+          [`userStats/${currentUser.uid}/latestSteps`]: {
+            date: log.date,
+            steps,
+            updatedAt: Date.now(),
+          },
+        });
+      } catch (error) {
+        console.warn('syncSteps failed', firebaseMessage(error));
+      }
+    },
+    async recordVisit(location){
+      if(!currentUser || !location?.id) return;
+      try {
+        const cleanId = String(location.id).replace(/[.#$/[\]]/g, '-');
+        await update(ref(db), {
+          [`visits/${currentUser.uid}/${cleanId}`]: {
+            id: cleanId,
+            name: String(location.name || '').slice(0, 80),
+            type: String(location.type || ''),
+            tag: String(location.tag || ''),
+            lat: Number(location.lat),
+            lng: Number(location.lng),
+            date: location.date || '',
+            visitedAt: Number(location.visitedAt || Date.now()),
+            daySteps: Math.max(0, Math.floor(Number(location.daySteps) || 0)),
+            updatedAt: Date.now(),
+          },
+        });
+      } catch (error) {
+        console.warn('recordVisit failed', firebaseMessage(error));
+      }
+    },
+    async recordRoute(route){
+      if(!currentUser || !route?.id) return;
+      try {
+        const cleanId = String(route.id).replace(/[.#$/[\]]/g, '-');
+        await update(ref(db), {
+          [`routeLogs/${currentUser.uid}/${cleanId}`]: {
+            id: cleanId,
+            title: String(route.title || '').slice(0, 80),
+            summary: String(route.summary || '').slice(0, 240),
+            time: route.time || '',
+            pace: route.pace || '',
+            tasks: Number(route.tasks || 0),
+            steps: Math.max(0, Math.floor(Number(route.steps) || 0)),
+            reward: Number(route.reward || 0),
+            createdAt: Number(route.createdAt || Date.now()),
+            updatedAt: Date.now(),
+          },
+        });
+      } catch (error) {
+        console.warn('recordRoute failed', firebaseMessage(error));
       }
     },
     async createParty(inviteUids = []){

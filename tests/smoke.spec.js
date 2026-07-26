@@ -54,6 +54,33 @@ test('pet generator requires and accepts an uploaded image', async ({ page }) =>
   await expect(page.locator('#topFrag')).toHaveText('42');
 });
 
+test('step counter starts from real daily steps and ignores demo rewards', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await expect(page.locator('#topStep')).toHaveText('0');
+
+  const result = await page.evaluate(() => {
+    setTodaySteps(12, 'test');
+    const beforeMemory = state.steps;
+    saveMemory('frini');
+    stepTracker.lastMagnitude = 9.8;
+    stepTracker.lastStepAt = Date.now() - 400;
+    handleMotionStep({ accelerationIncludingGravity: { x: 8, y: 0, z: 9.8 } });
+    return {
+      beforeMemory,
+      afterMemory: beforeMemory === 12 ? state.steps - 1 : state.steps,
+      finalSteps: state.steps,
+      stored: JSON.parse(localStorage.getItem('footprintStepLogs:v1')),
+    };
+  });
+
+  expect(result.beforeMemory).toBe(12);
+  expect(result.afterMemory).toBe(12);
+  expect(result.finalSteps).toBe(13);
+  const today = new Date().toLocaleDateString('sv-SE');
+  expect(result.stored[today].steps).toBe(13);
+  await expect(page.locator('#topStep')).toHaveText('13');
+});
+
 test('nearby places falls back to client Google Places for GitHub Pages', async ({ page }) => {
   await page.route('**/api/nearby-places**', (route) => {
     route.fulfill({ status: 404, contentType: 'text/plain', body: 'not found' });
