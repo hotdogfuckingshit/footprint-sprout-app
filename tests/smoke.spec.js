@@ -362,8 +362,10 @@ test('walk party creation sends invites only to checked friends and does not ove
   await expect.poll(() => page.evaluate(() => window.createdInvites)).toBeNull();
 });
 
-test('map double click toggles fullscreen map mode', async ({ page }) => {
+test('map double click enters fullscreen and does not exit while zooming', async ({ page }) => {
   await page.goto('http://localhost:5173');
+  await page.locator('#mapWrap').dblclick();
+  await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await page.locator('#mapWrap').dblclick();
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await page.locator('.map-exit-btn').click();

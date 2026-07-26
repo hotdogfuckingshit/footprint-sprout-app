@@ -353,7 +353,7 @@ body{
     <!-- ===== MAP SCREEN ===== -->
     <div class="screen active" id="screen-map">
       <div class="hero-line">看見別人的城市記憶，走到那裡，留下你自己的。<br>西屯區內 <b id="visitedCount">0</b>/<span id="totalCount">8</span> 個地點已到訪。</div>
-      <div class="map-wrap" id="mapWrap" ondblclick="toggleMapFullscreen()" ontouchend="handleMapTouch(event)">
+      <div class="map-wrap" id="mapWrap" ondblclick="handleMapDoubleClick(event)" ontouchend="handleMapTouch(event)">
         <div id="map" style="width:100%; height:210px; background:#DCEBF7; display:flex; align-items:center; justify-content:center; color:#5C6B8A; font-size:12px; text-align:center; padding:12px;">
           地圖載入中…如果一直顯示這行字，請確認 .env 已填 VITE_GOOGLE_MAPS_API_KEY
         </div>
@@ -938,12 +938,21 @@ function toggleMapFullscreen(force){
   resizeMapSoon();
 }
 
+function handleMapDoubleClick(event){
+  if(event.target?.closest('button')) return;
+  const wrap = document.getElementById('mapWrap');
+  if(!wrap || wrap.classList.contains('map-fullscreen')) return;
+  toggleMapFullscreen(true);
+}
+
 function handleMapTouch(event){
   if(event.target?.closest('button')) return;
+  const wrap = document.getElementById('mapWrap');
+  if(wrap?.classList.contains('map-fullscreen')) return;
   const now = Date.now();
   if(now - lastMapTouchAt < 320){
     event.preventDefault();
-    toggleMapFullscreen();
+    toggleMapFullscreen(true);
     lastMapTouchAt = 0;
     return;
   }
