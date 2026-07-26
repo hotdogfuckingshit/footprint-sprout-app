@@ -2143,12 +2143,12 @@ function placeUserMarker(){
 async function fetchNearbyRealPlaces(filter = currentFilter, options = {}){
   const requestedFilter = filter;
   const apiLayer = layerForApi(requestedFilter);
-  const savedScrollTop = options.preserveScroll ? currentMapScrollTop() : null;
+  const savedScrollTop = options.preserveScroll ? desiredMapListScrollTop() : null;
   try {
     document.getElementById('locateNote').textContent = '正在同步附近真實地點...';
     const data = await loadNearbyPlaces(apiLayer);
     if(currentFilter !== requestedFilter) return;
-    const places = (data.places || []).map(toGameLocation).filter(Boolean);
+    const places = (data.places || []).map((place, index) => toGameLocation(place, index, requestedFilter)).filter(Boolean);
     if(!places.length){
       document.getElementById('locateNote').textContent = '附近暫時沒有符合分類的真實地點，先顯示預設探索清單';
       return;
@@ -2158,7 +2158,7 @@ async function fetchNearbyRealPlaces(filter = currentFilter, options = {}){
     renderFilters();
     renderList();
     renderMapMarkers();
-    focusOwnLocation(DEFAULT_MAP_ZOOM);
+    if(!options.preserveScroll) focusOwnLocation(DEFAULT_MAP_ZOOM);
     if(options.preserveScroll) restoreMapScroll(savedScrollTop);
     document.getElementById('mapBadge').textContent = `📍 ${data.provider === 'google' ? 'Google Places' : 'OpenStreetMap'}・真實地點`;
     document.getElementById('locateNote').textContent = `已載入 ${places.length} 個附近真實地點，點卡片可看店名與導航`;
@@ -2425,9 +2425,10 @@ function accessoryFor(location){
   return ACC_MAP[location.id];
 }
 
-function toGameLocation(place, index){
+function toGameLocation(place, index, requestedFilter = 'all'){
   if(!Number.isFinite(place.latitude) || !Number.isFinite(place.longitude) || !place.name) return null;
-  const type = typeFromPlace(place);
+  const forcedTypes = new Set(['cafe', 'dessert', 'park', 'scenic', 'night', 'book']);
+  const type = forcedTypes.has(requestedFilter) ? requestedFilter : typeFromPlace(place);
   const id = String(place.id || `place-${index}`).replace(/[^\w-]/g, '-');
   const location = {
     id,
@@ -2478,17 +2479,24 @@ function renderFilters(){
 function currentMapScrollTop(){
   return Number(document.getElementById('screen-map')?.scrollTop || 0);
 }
+function desiredMapListScrollTop(){
+  const screen = document.getElementById('screen-map');
+  const row = document.getElementById('filterRow');
+  if(!screen || !row) return currentMapScrollTop();
+  return Math.max(currentMapScrollTop(), row.offsetTop - 8);
+}
 function restoreMapScroll(scrollTop){
   const screen = document.getElementById('screen-map');
   if(!screen || !Number.isFinite(scrollTop)) return;
   const restore = () => {
-    if(screen.scrollTop < scrollTop) screen.scrollTop = Math.min(scrollTop, screen.scrollHeight);
+    screen.scrollTop = Math.min(scrollTop, Math.max(0, screen.scrollHeight - screen.clientHeight));
   };
   restore();
   requestAnimationFrame(restore);
+  setTimeout(restore, 120);
 }
 function setFilter(k){
-  const savedScrollTop = currentMapScrollTop();
+  const savedScrollTop = desiredMapListScrollTop();
   currentFilter=k;
   renderFilters();
   renderList();
