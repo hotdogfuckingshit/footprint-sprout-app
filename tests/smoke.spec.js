@@ -448,6 +448,67 @@ test('map double click enters fullscreen and does not exit while zooming', async
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await page.locator('#mapWrap').dblclick();
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
+  await page.locator('#mapWrap').click({ position: { x: 250, y: 250 } });
+  await expect(page.locator('#mapWrap')).not.toHaveClass(/map-fullscreen/);
+  await page.locator('#mapWrap').dblclick();
+  await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await page.locator('.map-exit-btn').click();
   await expect(page.locator('#mapWrap')).not.toHaveClass(/map-fullscreen/);
+});
+
+test('distant friend locations are included in map bounds', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const fitResult = await page.evaluate(async () => {
+    window.fitBoundsCalls = [];
+    map = {
+      fitBounds(bounds, padding) {
+        window.fitBoundsCalls.push({ points: bounds.points, padding });
+      },
+      getZoom() { return 4; },
+      setZoom(value) { window.lastZoom = value; },
+      setCenter(value) { window.lastCenter = value; },
+    };
+    window.google = {
+      maps: {
+        SymbolPath: { CIRCLE: 'circle' },
+        Marker: class Marker {
+          constructor(options) { this.options = options; }
+          setMap() {}
+          addListener() {}
+        },
+        LatLngBounds: class LatLngBounds {
+          constructor() { this.points = []; }
+          extend(point) { this.points.push(point); }
+        },
+        event: {
+          addListenerOnce(_map, _name, callback) { callback(); },
+        },
+      },
+    };
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: { uid: 'me', displayName: '城市玩家', email: 'me@example.com' },
+      friendCode: 'ABC12345',
+      sharing: true,
+      myLocation: { lat: 24.1815, lng: 120.6449, updatedAt: Date.now() },
+      friends: [
+        {
+          uid: 'jp-friend',
+          displayName: '日本好友',
+          location: { lat: 35.6812, lng: 139.7671, updatedAt: Date.now() },
+        },
+      ],
+      party: null,
+      partyInvites: [],
+    });
+    fitFriendMapBounds();
+    return window.fitBoundsCalls.at(-1);
+  });
+
+  expect(fitResult.points).toEqual([
+    { lat: 24.1815, lng: 120.6449 },
+    { lat: 35.6812, lng: 139.7671 },
+  ]);
+  expect(fitResult.padding).toBe(64);
 });

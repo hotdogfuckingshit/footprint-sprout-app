@@ -96,6 +96,8 @@ body{
 .map-wrap.map-fullscreen .map-badge{bottom:18px; left:18px;}
 .map-exit-btn{display:none; position:absolute; top:8px; left:8px; background:var(--ink); color:#fff; border:none; border-radius:999px; padding:7px 12px; font-size:11.5px; font-weight:900; box-shadow:var(--shadow); cursor:pointer; font-family:inherit; z-index:2;}
 .map-wrap.map-fullscreen .map-exit-btn{display:block;}
+.map-friends-btn{display:none; position:absolute; top:48px; left:8px; background:var(--paper); color:var(--leaf-dark); border:none; border-radius:999px; padding:7px 12px; font-size:11.5px; font-weight:900; box-shadow:var(--shadow); cursor:pointer; font-family:inherit; z-index:2;}
+.map-wrap.map-fullscreen .map-friends-btn{display:block;}
 .map-badge{position:absolute; bottom:8px; left:8px; background:rgba(255,255,255,0.92); padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; color:var(--ink);}
 .locate-btn{position:absolute; top:8px; right:8px; background:var(--paper); border:none; border-radius:999px; padding:6px 12px; font-size:11.5px; font-weight:800; color:var(--leaf-dark); box-shadow:var(--shadow); cursor:pointer; font-family:inherit;}
 .mapline-actions{display:flex; align-items:center; gap:10px; padding:0 16px 8px;}
@@ -385,12 +387,13 @@ body{
     <div class="screen active" id="screen-map">
       <div class="hero-line">看見別人的城市記憶，走到那裡，留下你自己的。<br>西屯區內 <b id="visitedCount">0</b>/<span id="totalCount">8</span> 個地點已到訪。</div>
       <div class="quest-card" id="questCard"></div>
-      <div class="map-wrap" id="mapWrap" ondblclick="handleMapDoubleClick(event)" ontouchend="handleMapTouch(event)">
+      <div class="map-wrap" id="mapWrap" onclick="handleMapClick(event)" ondblclick="handleMapDoubleClick(event)" ontouchstart="handleMapTouchStart(event)" ontouchmove="handleMapTouchMove(event)" ontouchend="handleMapTouchEnd(event)">
         <div id="map" style="width:100%; height:210px; background:#DCEBF7; display:flex; align-items:center; justify-content:center; color:#5C6B8A; font-size:12px; text-align:center; padding:12px;">
           地圖載入中…如果一直顯示這行字，請確認 .env 已填 VITE_GOOGLE_MAPS_API_KEY
         </div>
         <div class="map-badge" id="mapBadge">📍 西屯區・預設位置</div>
         <button class="map-exit-btn" onclick="toggleMapFullscreen(false); event.stopPropagation();">退出全螢幕</button>
+        <button class="map-friends-btn" onclick="fitFriendMapBounds(); event.stopPropagation();">查看好友</button>
         <button class="locate-btn" onclick="locateMe()" id="locateBtn">🎯 定位我</button>
       </div>
       <div class="mapline-actions">
@@ -1152,7 +1155,7 @@ function renderPartyInvitePicker(container, signedIn){
 function friendCardHtml(friend){
   const distance = friendDistanceText(friend);
   return `
-    <div class="friend-card">
+    <div class="friend-card" onclick="${friend.location ? `focusFriendOnMap('${escapeHtml(friend.uid)}')` : ''}">
       <div class="friend-avatar">${avatarText(friend.displayName || '友')}</div>
       <div class="friend-main">
         <div class="friend-name">${escapeHtml(friend.displayName || '好友')}</div>
@@ -1173,6 +1176,15 @@ function friendDistanceText(friend){
     Number(friend.location.lng)
   );
   return d.meters >= 1000 ? `${(d.meters / 1000).toFixed(1)} km` : `${d.meters} m`;
+}
+
+function validLatLng(location){
+  if(!location) return null;
+  const lat = Number(location.lat);
+  const lng = Number(location.lng);
+  if(!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if(lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return {lat, lng};
 }
 
 function timeAgo(ts){
@@ -1300,9 +1312,9 @@ function leaveWalkParty(){
 function renderFriendMarkers(){
   if(!map || !window.google?.maps) return;
   friendMarkers.forEach((marker) => marker.setMap(null));
-  friendMarkers = onlineState.friends.filter((friend) => friend.location).map((friend) => {
+  friendMarkers = onlineState.friends.map((friend) => ({friend, position: validLatLng(friend.location)})).filter((item) => item.position).map(({friend, position}) => {
     const marker = new google.maps.Marker({
-      position: { lat: Number(friend.location.lat), lng: Number(friend.location.lng) },
+      position,
       map,
       title: friend.displayName || '好友',
       label: { text: avatarText(friend.displayName || '友'), color: '#fff', fontSize: '12px', fontWeight: '800' },
@@ -1320,20 +1332,64 @@ function renderFriendMarkers(){
       showTab('online');
       toast(`${friend.displayName || '好友'}：${friendDistanceText(friend)}`);
     });
+    marker.friendUid = friend.uid;
     return marker;
   });
+}
+
+function mapOriginPoint(){
+  return validLatLng(onlineState.myLocation) || {lat: HERE.lat, lng: HERE.lng};
+}
+
+function fitMapToPoints(points, maxZoom = 15){
+  if(!map || !window.google?.maps || !points.length) return;
+  if(points.length === 1){
+    map.setCenter(points[0]);
+    map.setZoom(Math.min(maxZoom, 13));
+    return;
+  }
+  const bounds = new google.maps.LatLngBounds();
+  points.forEach((point) => bounds.extend(point));
+  map.fitBounds(bounds, 64);
+  google.maps.event.addListenerOnce(map, 'idle', () => {
+    if(map.getZoom() > maxZoom) map.setZoom(maxZoom);
+  });
+}
+
+function fitFriendMapBounds(){
+  const friendPoints = onlineState.friends.map((friend) => validLatLng(friend.location)).filter(Boolean);
+  if(!friendPoints.length){ toast('目前沒有好友分享位置'); return; }
+  fitMapToPoints([mapOriginPoint(), ...friendPoints], 8);
+  toast(`已顯示 ${friendPoints.length} 位好友位置`);
+}
+
+function focusFriendOnMap(uid){
+  const friend = onlineState.friends.find((item) => item.uid === uid);
+  const friendPoint = validLatLng(friend?.location);
+  if(!friendPoint){ toast('這位好友尚未分享位置'); return; }
+  showTab('map');
+  toggleMapFullscreen(true);
+  setTimeout(() => fitMapToPoints([mapOriginPoint(), friendPoint], 8), 120);
+  toast(`${friend.displayName || '好友'}：${friendDistanceText(friend)}`);
 }
 
 /* ================= 真正的 Google Maps（需要你自己的 API 金鑰） ================= */
 let map, userMarker, mapMarkers = [], friendMarkers = [];
 let lastMapTouchAt = 0;
+let lastMapTouchEventAt = 0;
+let pendingMapExitTimer = null;
+let mapTouchGesture = null;
 
 function resizeMapSoon(){
   setTimeout(() => {
     if(map && window.google?.maps){
       google.maps.event.trigger(map, 'resize');
-      map.setCenter({lat: HERE.lat, lng: HERE.lng});
       renderFriendMarkers();
+      if(document.getElementById('mapWrap')?.classList.contains('map-fullscreen') && onlineState.friends.some((friend) => validLatLng(friend.location))){
+        fitFriendMapBounds();
+      } else {
+        map.setCenter({lat: HERE.lat, lng: HERE.lng});
+      }
     }
   }, 80);
 }
@@ -1350,22 +1406,82 @@ function toggleMapFullscreen(force){
 function handleMapDoubleClick(event){
   if(event.target?.closest('button')) return;
   const wrap = document.getElementById('mapWrap');
-  if(!wrap || wrap.classList.contains('map-fullscreen')) return;
+  if(!wrap) return;
+  if(wrap.classList.contains('map-fullscreen')){
+    clearTimeout(pendingMapExitTimer);
+    pendingMapExitTimer = null;
+    return;
+  }
   toggleMapFullscreen(true);
 }
 
-function handleMapTouch(event){
-  if(event.target?.closest('button')) return;
+function isMapControlTarget(event){
+  const target = event.target;
+  return Boolean(target?.closest?.('button,a,[role="button"],.gmnoprint,.gm-control-active,.gm-style-cc,.map-exit-btn,.map-friends-btn,.locate-btn'));
+}
+
+function handleMapTouchStart(event){
+  lastMapTouchEventAt = Date.now();
+  const touch = event.touches?.[0];
+  mapTouchGesture = {
+    x: touch?.clientX ?? 0,
+    y: touch?.clientY ?? 0,
+    moved: false,
+    multi: (event.touches?.length || 0) > 1,
+    control: isMapControlTarget(event),
+  };
+}
+
+function handleMapTouchMove(event){
+  lastMapTouchEventAt = Date.now();
+  if(!mapTouchGesture) return;
+  if((event.touches?.length || 0) > 1) mapTouchGesture.multi = true;
+  const touch = event.touches?.[0];
+  if(!touch) return;
+  const dx = Math.abs(touch.clientX - mapTouchGesture.x);
+  const dy = Math.abs(touch.clientY - mapTouchGesture.y);
+  if(dx > 10 || dy > 10) mapTouchGesture.moved = true;
+}
+
+function handleMapTouchEnd(event){
+  lastMapTouchEventAt = Date.now();
+  if(isMapControlTarget(event) || mapTouchGesture?.control || mapTouchGesture?.moved || mapTouchGesture?.multi) return;
   const wrap = document.getElementById('mapWrap');
-  if(wrap?.classList.contains('map-fullscreen')) return;
+  if(!wrap) return;
   const now = Date.now();
-  if(now - lastMapTouchAt < 320){
+  if(!wrap.classList.contains('map-fullscreen') && now - lastMapTouchAt < 320){
     event.preventDefault();
     toggleMapFullscreen(true);
     lastMapTouchAt = 0;
     return;
   }
+  if(wrap.classList.contains('map-fullscreen')){
+    if(now - lastMapTouchAt < 320){
+      clearTimeout(pendingMapExitTimer);
+      pendingMapExitTimer = null;
+      lastMapTouchAt = 0;
+      return;
+    }
+    clearTimeout(pendingMapExitTimer);
+    pendingMapExitTimer = setTimeout(() => {
+      toggleMapFullscreen(false);
+      pendingMapExitTimer = null;
+    }, 260);
+  }
   lastMapTouchAt = now;
+}
+
+function handleMapClick(event){
+  if(Date.now() - lastMapTouchEventAt < 500) return;
+  if(isMapControlTarget(event)) return;
+  const wrap = document.getElementById('mapWrap');
+  if(wrap?.classList.contains('map-fullscreen')){
+    clearTimeout(pendingMapExitTimer);
+    pendingMapExitTimer = setTimeout(() => {
+      toggleMapFullscreen(false);
+      pendingMapExitTimer = null;
+    }, 260);
+  }
 }
 
 // Maps JavaScript API 載入完成後，Google 會自動呼叫這個 callback（見 <head> 裡的 script 標籤）
