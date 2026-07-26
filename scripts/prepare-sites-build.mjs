@@ -194,8 +194,21 @@ export default {
         },
       });
     }
-    const key = env.VITE_GOOGLE_MAPS_API_KEY || env.GOOGLE_MAPS_API_KEY || 'VITE_GOOGLE_MAPS_API_KEY';
-    return new Response(HTML.replaceAll('%VITE_GOOGLE_MAPS_API_KEY%', key), {
+    const replacements = {
+      VITE_GOOGLE_MAPS_API_KEY: env.VITE_GOOGLE_MAPS_API_KEY || env.GOOGLE_MAPS_API_KEY || 'VITE_GOOGLE_MAPS_API_KEY',
+      VITE_FIREBASE_API_KEY: env.VITE_FIREBASE_API_KEY || 'VITE_FIREBASE_API_KEY',
+      VITE_FIREBASE_AUTH_DOMAIN: env.VITE_FIREBASE_AUTH_DOMAIN || 'VITE_FIREBASE_AUTH_DOMAIN',
+      VITE_FIREBASE_DATABASE_URL: env.VITE_FIREBASE_DATABASE_URL || 'VITE_FIREBASE_DATABASE_URL',
+      VITE_FIREBASE_PROJECT_ID: env.VITE_FIREBASE_PROJECT_ID || 'VITE_FIREBASE_PROJECT_ID',
+      VITE_FIREBASE_MESSAGING_SENDER_ID: env.VITE_FIREBASE_MESSAGING_SENDER_ID || 'VITE_FIREBASE_MESSAGING_SENDER_ID',
+      VITE_FIREBASE_APP_ID: env.VITE_FIREBASE_APP_ID || 'VITE_FIREBASE_APP_ID',
+      VITE_FIREBASE_VAPID_KEY: env.VITE_FIREBASE_VAPID_KEY || 'VITE_FIREBASE_VAPID_KEY',
+    };
+    const body = Object.entries(replacements).reduce(
+      (content, [key, value]) => content.replaceAll(\`%\${key}%\`, value),
+      HTML
+    );
+    return new Response(body, {
       headers: { 'content-type': 'text/html; charset=utf-8' },
     });
   },

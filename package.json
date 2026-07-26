@@ -2,7 +2,9 @@
   "scripts": {
     "dev": "node server.mjs",
     "build": "vite build && node scripts/prepare-sites-build.mjs",
-    "preview": "NODE_ENV=production node server.mjs"
+    "preview": "NODE_ENV=production node server.mjs",
+    "deploy:rules": "firebase deploy --only database",
+    "deploy:functions": "firebase deploy --only functions"
   },
   "dependencies": {
     "@tensorflow-models/coco-ssd": "^2.2.3",

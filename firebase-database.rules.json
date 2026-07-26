@@ -80,6 +80,15 @@
           ".write": "auth != null"
         }
       }
+    },
+    "pushTokens": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$tokenKey": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "!newData.exists() || (newData.child('token').isString() && newData.child('uid').val() === auth.uid)"
+        }
+      }
     }
   }
 }

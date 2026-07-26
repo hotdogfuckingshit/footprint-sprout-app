@@ -587,8 +587,10 @@ window.FOOTPRINT_FIREBASE_CONFIG = {
   authDomain: '%VITE_FIREBASE_AUTH_DOMAIN%',
   databaseURL: '%VITE_FIREBASE_DATABASE_URL%',
   projectId: '%VITE_FIREBASE_PROJECT_ID%',
+  messagingSenderId: '%VITE_FIREBASE_MESSAGING_SENDER_ID%',
   appId: '%VITE_FIREBASE_APP_ID%',
 };
+window.FOOTPRINT_FIREBASE_VAPID_KEY = '%VITE_FIREBASE_VAPID_KEY%';
 
 /* ================= DATA — 真實地點（台中市西屯區） ================= */
 const HERE = {lat:24.1815, lng:120.6449}; // 目前位置（示範：逢甲商圈一帶）
@@ -1241,11 +1243,18 @@ let onlineState = {
   sharing: false,
   shareTargetUids: [],
   lastSharedAt: null,
+  push: {
+    supported: false,
+    configured: false,
+    permission: typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
+    enabled: false,
+  },
 };
 let selectedInviteUids = new Set();
 let inviteSelectionTouched = false;
 let selectedShareUids = new Set();
 let shareSelectionTouched = false;
+let launchActionHandled = false;
 
 function firebaseConfigured(){
   const cfg = window.FOOTPRINT_FIREBASE_CONFIG || {};
@@ -1265,6 +1274,7 @@ function receiveOnlineSnapshot(snapshot){
   renderOnline();
   renderProfile();
   renderFriendMarkers();
+  handleNotificationLaunch();
 }
 window.receiveOnlineSnapshot = receiveOnlineSnapshot;
 
@@ -1320,6 +1330,11 @@ function renderOnline(){
       </div>
       <button class="btn btn-ghost" onclick="onlineSignOut()">登出</button>
     </div>
+    <div class="online-actions" style="margin-top:10px;">
+      <button class="btn btn-primary" onclick="enablePushNotifications()">開啟通知</button>
+      <button class="btn btn-ghost" onclick="showTab('online')">通知設定</button>
+    </div>
+    <div class="privacy-note" id="pushNotificationStatus">${escapeHtml(pushStatusText())}</div>
   ` : `
     <div class="empty-online">${ready ? '用 Google 登入後，就能產生好友碼並同步位置。' : '請先在 GitHub Secrets 補 Firebase 設定，部署後就會啟用。'}</div>
     <button class="btn btn-primary" style="margin-top:10px;" onclick="onlineQuickSignIn()">快速登入</button>
@@ -1375,6 +1390,15 @@ function renderOnline(){
     partyStatus.className = 'empty-online';
     partyStatus.textContent = signedIn ? '尚未建立小隊。建立後，好友清單會變成一起散步的小隊看板。' : '登入後可以建立散步小隊。';
   }
+}
+
+function pushStatusText(){
+  const push = onlineState.push || {};
+  if(!push.supported) return '此瀏覽器尚不支援網頁推播，請用 Safari/Chrome 開啟並安裝到主畫面。';
+  if(!push.configured) return '尚未設定 Firebase Cloud Messaging VAPID key，暫時只能在 App 內收到提醒。';
+  if(push.permission === 'denied') return '通知權限已被封鎖，請到瀏覽器或系統設定重新允許。';
+  if(push.enabled) return '通知已啟用：小隊邀請與好友位置分享會跳出系統通知。';
+  return '開啟通知後，好友邀請小隊或分享位置時，即使沒有停留在 App 內也能收到。';
 }
 
 function syncInviteSelection(){
@@ -1522,6 +1546,35 @@ function onlineQuickSignIn(){
 
 function onlineSignOut(){
   window.FootprintOnline?.signOut?.();
+}
+
+function enablePushNotifications(){
+  if(!onlineState.user){ toast('請先登入'); return; }
+  window.FootprintOnline?.enablePushNotifications?.();
+}
+
+function handleNotificationLaunch(){
+  if(launchActionHandled) return;
+  const params = new URLSearchParams(location.search);
+  const tab = params.get('tab');
+  const action = params.get('action');
+  const friendUid = params.get('friend');
+  const partyId = params.get('partyId');
+  if(!tab && !action) return;
+  if(tab && document.getElementById(`screen-${tab}`)) showTab(tab);
+  if(action && !onlineState.user) return;
+  if(action === 'shareBack' && friendUid && !onlineState.friends.some((friend) => friend.uid === friendUid)) return;
+  launchActionHandled = true;
+  if(action === 'shareBack' && friendUid){
+    selectedShareUids = new Set([friendUid]);
+    shareSelectionTouched = true;
+    renderOnline();
+    toast('已選取好友，按「開始分享」即可回傳位置');
+  }
+  if(action === 'joinParty' && partyId){
+    showTab('online');
+    toast('小隊邀請已開啟，請確認後加入');
+  }
 }
 
 function saveProfileName(){
@@ -2608,6 +2661,7 @@ renderOnline();
 renderQuest();
 renderReviews();
 loadGoogleMaps();
+setTimeout(handleNotificationLaunch, 0);
 </script>
 <script type="module">
 const firebaseConfig = window.FOOTPRINT_FIREBASE_CONFIG || {};
@@ -2638,17 +2692,25 @@ if(!configured){
       getDatabase, ref, get, set, update, remove, onValue,
       query, orderByChild, equalTo, onDisconnect,
     },
+    messagingModule,
   ] = await Promise.all([
     import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
     import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'),
     import('https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js'),
+    import('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js').catch(() => null),
   ]);
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getDatabase(app);
   const provider = new GoogleAuthProvider();
+  const vapidKey = String(window.FOOTPRINT_FIREBASE_VAPID_KEY || '').trim();
+  const messagingConfigured = Boolean(firebaseConfig.messagingSenderId && vapidKey && !vapidKey.includes('%VITE_'));
+  const notificationSupported = Boolean(window.isSecureContext && 'Notification' in window && 'serviceWorker' in navigator && messagingModule);
+  const messagingSupported = notificationSupported && messagingConfigured && await messagingModule.isSupported().catch(() => false);
+  const messaging = messagingSupported ? messagingModule.getMessaging(app) : null;
   let currentUser = null;
+  let currentPushTokenKey = null;
   let friendsListUnsub = null;
   let friendDetailUnsubs = [];
   let partyUnsub = null;
@@ -2668,7 +2730,15 @@ if(!configured){
     email: user.email || '',
     photoURL: user.photoURL || '',
   });
+  const pushTokenKey = (token) => btoa(token).replace(/[^a-zA-Z0-9]/g, '').slice(0, 120);
   const firebaseMessage = (error) => error?.code || error?.message || String(error);
+  const pushView = (patch = {}) => ({
+    supported: notificationSupported,
+    configured: messagingConfigured,
+    permission: typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
+    enabled: Boolean(currentPushTokenKey),
+    ...patch,
+  });
 
   async function ensureUser(user){
     const userRef = ref(db, `users/${user.uid}`);
@@ -2710,6 +2780,57 @@ if(!configured){
     visitsUnsub = null;
     activePartyId = null;
     knownPartyInviteIds = new Set();
+  }
+
+  async function pushServiceWorkerRegistration(){
+    if(!notificationSupported) throw new Error('這個瀏覽器不支援網頁推播');
+    const swUrl = new URL('sw.js', location.href).toString();
+    return navigator.serviceWorker.register(swUrl);
+  }
+
+  async function registerPushToken(){
+    if(!currentUser) return window.toast?.('請先登入');
+    if(!messagingConfigured) return window.toast?.('尚未設定 Firebase Cloud Messaging VAPID key');
+    if(!messagingSupported || !messaging) return window.toast?.('這個瀏覽器暫不支援背景推播，請用 Safari/Chrome 開啟並安裝 App');
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){
+      emit({ push: pushView({ permission, enabled: false }) });
+      window.toast?.('通知權限未開啟');
+      return;
+    }
+    const registration = await pushServiceWorkerRegistration();
+    const token = await messagingModule.getToken(messaging, {
+      vapidKey,
+      serviceWorkerRegistration: registration,
+    });
+    if(!token) throw new Error('Firebase 未回傳推播 token');
+    const key = pushTokenKey(token);
+    currentPushTokenKey = key;
+    await update(ref(db), {
+      [`pushTokens/${currentUser.uid}/${key}`]: {
+        token,
+        uid: currentUser.uid,
+        userAgent: navigator.userAgent.slice(0, 240),
+        updatedAt: Date.now(),
+      },
+    });
+    emit({ push: pushView({ enabled: true }) });
+    window.toast?.('通知已開啟');
+  }
+
+  async function removeCurrentPushToken(){
+    if(currentUser && currentPushTokenKey){
+      await remove(ref(db, `pushTokens/${currentUser.uid}/${currentPushTokenKey}`)).catch(() => {});
+    }
+    currentPushTokenKey = null;
+  }
+
+  if(messaging){
+    messagingModule.onMessage(messaging, (payload) => {
+      const title = payload.notification?.title || payload.data?.title || '足跡通知';
+      const body = payload.notification?.body || payload.data?.body || '';
+      window.toast?.(body ? `${title}：${body}` : title);
+    });
   }
 
   function subscribeFriends(uid){
@@ -2848,13 +2969,15 @@ if(!configured){
     currentUser = user;
     clearOnlineListeners();
     if(!user){
-      emit({ user: null, friendCode: '', friends: [], party: null, partyInvites: [], myLocation: null, sharing: false, shareTargetUids: [], status: 'signed-out' });
+      currentPushTokenKey = null;
+      emit({ user: null, friendCode: '', friends: [], party: null, partyInvites: [], myLocation: null, sharing: false, shareTargetUids: [], status: 'signed-out', push: pushView({ enabled: false }) });
       return;
     }
     emit({
       user: userView(user),
       friendCode: codeFromUid(user.uid),
       status: 'signed-in',
+      push: pushView(),
     });
     try {
       const profile = await ensureUser(user);
@@ -2865,6 +2988,7 @@ if(!configured){
       subscribeShareTargets(user.uid);
       subscribeProgress(user.uid);
       syncLocalStepLogsToBackend();
+      handleNotificationLaunch();
     } catch (error) {
       emit({ user: userView(user), friendCode: codeFromUid(user.uid), friends: [], party: null, partyInvites: [], status: 'signed-in-db-error' });
       window.toast?.(`已登入，但資料庫尚未允許讀寫：${firebaseMessage(error)}`);
@@ -2911,7 +3035,16 @@ if(!configured){
       }
     },
     async signOut(){
+      await removeCurrentPushToken();
       await firebaseSignOut(auth);
+    },
+    async enablePushNotifications(){
+      try {
+        await registerPushToken();
+      } catch (error) {
+        emit({ push: pushView({ enabled: false }) });
+        window.toast?.(`通知啟用失敗：${firebaseMessage(error)}`);
+      }
     },
     async updateDisplayName(displayName){
       if(!currentUser) return window.toast?.('請先登入');
