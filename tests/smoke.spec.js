@@ -512,3 +512,76 @@ test('distant friend locations are included in map bounds', async ({ page }) => 
   ]);
   expect(fitResult.padding).toBe(64);
 });
+
+test('locate me resets map zoom after distant friend bounds', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(async () => {
+    window.zoomCalls = [];
+    window.centerCalls = [];
+    map = {
+      setCenter(value) { window.centerCalls.push(value); },
+      setZoom(value) { window.zoomCalls.push(value); },
+    };
+    window.google = {
+      maps: {
+        SymbolPath: { CIRCLE: 'circle' },
+        Marker: class Marker {
+          constructor(options) { this.options = options; }
+          setMap() {}
+          addListener() {}
+        },
+        event: { trigger() {}, addListenerOnce(_map, _name, callback) { callback(); } },
+      },
+    };
+    window.fetchNearbyRealPlaces = () => {};
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: {
+        getCurrentPosition(success) {
+          success({ coords: { latitude: 24.2, longitude: 120.7, accuracy: 10 } });
+        },
+      },
+    });
+    await locateMe();
+    return {
+      lastZoom: window.zoomCalls.at(-1),
+      lastCenter: window.centerCalls.at(-1),
+    };
+  });
+
+  expect(result.lastZoom).toBe(15);
+  expect(result.lastCenter).toEqual({ lat: 24.2, lng: 120.7 });
+});
+
+test('exiting fullscreen restores normal local map zoom', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(async () => {
+    window.zoomCalls = [];
+    window.centerCalls = [];
+    map = {
+      setCenter(value) { window.centerCalls.push(value); },
+      setZoom(value) { window.zoomCalls.push(value); },
+    };
+    window.google = {
+      maps: {
+        SymbolPath: { CIRCLE: 'circle' },
+        Marker: class Marker {
+          constructor(options) { this.options = options; }
+          setMap() {}
+          addListener() {}
+        },
+        event: { trigger() {}, addListenerOnce(_map, _name, callback) { callback(); } },
+      },
+    };
+    toggleMapFullscreen(true);
+    toggleMapFullscreen(false);
+    await new Promise((resolve) => setTimeout(resolve, 140));
+    return {
+      lastZoom: window.zoomCalls.at(-1),
+      lastCenter: window.centerCalls.at(-1),
+    };
+  });
+
+  expect(result.lastZoom).toBe(14);
+  expect(result.lastCenter).toEqual({ lat: 24.1815, lng: 120.6449 });
+});

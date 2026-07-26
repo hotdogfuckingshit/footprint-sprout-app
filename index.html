@@ -1274,7 +1274,7 @@ async function sendLocationOnce(){
     HERE.lng = pos.coords.longitude;
     recomputeDistances();
     renderList();
-    if(map){ map.setCenter({lat:HERE.lat, lng:HERE.lng}); placeUserMarker(); renderMapMarkers(); renderFriendMarkers(); }
+    focusOwnLocation(USER_LOCATION_ZOOM);
     document.getElementById('mapBadge').textContent='📍 已分享你目前的位置';
     const payload = { lat: HERE.lat, lng: HERE.lng, accuracy: pos.coords.accuracy ?? null, updatedAt: Date.now() };
     window.FootprintOnline?.updateLocation?.(payload);
@@ -1374,21 +1374,31 @@ function focusFriendOnMap(uid){
 }
 
 /* ================= 真正的 Google Maps（需要你自己的 API 金鑰） ================= */
+const DEFAULT_MAP_ZOOM = 14;
+const USER_LOCATION_ZOOM = 15;
 let map, userMarker, mapMarkers = [], friendMarkers = [];
 let lastMapTouchAt = 0;
 let lastMapTouchEventAt = 0;
 let pendingMapExitTimer = null;
 let mapTouchGesture = null;
 
-function resizeMapSoon(){
+function focusOwnLocation(zoom = USER_LOCATION_ZOOM){
+  if(!map) return;
+  map.setCenter({lat: HERE.lat, lng: HERE.lng});
+  if(typeof map.setZoom === 'function') map.setZoom(zoom);
+  placeUserMarker();
+  renderMapMarkers();
+}
+
+function resizeMapSoon(nextFullscreen = document.getElementById('mapWrap')?.classList.contains('map-fullscreen')){
   setTimeout(() => {
     if(map && window.google?.maps){
       google.maps.event.trigger(map, 'resize');
-      renderFriendMarkers();
-      if(document.getElementById('mapWrap')?.classList.contains('map-fullscreen') && onlineState.friends.some((friend) => validLatLng(friend.location))){
+      if(nextFullscreen && onlineState.friends.some((friend) => validLatLng(friend.location))){
+        renderFriendMarkers();
         fitFriendMapBounds();
       } else {
-        map.setCenter({lat: HERE.lat, lng: HERE.lng});
+        focusOwnLocation(DEFAULT_MAP_ZOOM);
       }
     }
   }, 80);
@@ -1400,7 +1410,7 @@ function toggleMapFullscreen(force){
   const next = typeof force === 'boolean' ? force : !wrap.classList.contains('map-fullscreen');
   wrap.classList.toggle('map-fullscreen', next);
   document.body.style.overflow = next ? 'hidden' : '';
-  resizeMapSoon();
+  resizeMapSoon(next);
 }
 
 function handleMapDoubleClick(event){
@@ -1488,7 +1498,7 @@ function handleMapClick(event){
 function initMap(){
   map = new google.maps.Map(document.getElementById('map'), {
     center: {lat: HERE.lat, lng: HERE.lng},
-    zoom: 14,
+    zoom: DEFAULT_MAP_ZOOM,
     disableDefaultUI: false,
     zoomControl: true,
     mapTypeControl: false,
@@ -1577,7 +1587,7 @@ async function fetchNearbyRealPlaces(){
     renderFilters();
     renderList();
     renderMapMarkers();
-    if(map) map.setCenter({lat:HERE.lat, lng:HERE.lng});
+    focusOwnLocation(DEFAULT_MAP_ZOOM);
     document.getElementById('mapBadge').textContent = `📍 ${data.provider === 'google' ? 'Google Places' : 'OpenStreetMap'}・真實地點`;
     document.getElementById('locateNote').textContent = `已載入 ${places.length} 個附近真實地點，點卡片可看店名與導航`;
     toast(`已同步 ${places.length} 個真實地點`);
@@ -1706,7 +1716,7 @@ async function locateMe(){
     }
     HERE.lat=pos.coords.latitude; HERE.lng=pos.coords.longitude;
     recomputeDistances(); renderList();
-    if(map){ map.setCenter({lat:HERE.lat, lng:HERE.lng}); placeUserMarker(); renderMapMarkers(); renderFriendMarkers(); }
+    focusOwnLocation(USER_LOCATION_ZOOM);
     document.getElementById('mapBadge').textContent='📍 已定位到你目前的位置';
     btn.textContent='🎯 定位我';
     if(onlineState.sharing) sendLocationOnce();
@@ -1725,7 +1735,7 @@ function locateMe(){
   navigator.geolocation.getCurrentPosition(pos=>{
     HERE.lat=pos.coords.latitude; HERE.lng=pos.coords.longitude;
     recomputeDistances(); renderList();
-    if(map){ map.setCenter({lat:HERE.lat, lng:HERE.lng}); placeUserMarker(); renderMapMarkers(); renderFriendMarkers(); }
+    focusOwnLocation(USER_LOCATION_ZOOM);
     document.getElementById('mapBadge').textContent='📍 已定位到你目前的位置';
     document.getElementById('locateNote').textContent='距離已依你目前的實際位置重新計算，附近店家改用 Places API 查詢';
     btn.textContent='🎯 定位我';
