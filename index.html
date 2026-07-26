@@ -435,8 +435,7 @@ body{
       <div class="bar-block">
         <div class="bar-label"><span>今日真實步數</span><span class="num" id="stepBarLabel">0 / 8,000</span></div>
         <div class="bar-track"><div class="bar-fill step" id="stepBar" style="width:0%"></div></div>
-        <div class="privacy-note" id="stepStatus">尚未啟用真實步數。手機瀏覽器需要你允許動作感測器。</div>
-        <button class="btn btn-primary" id="stepStartBtn" onclick="enableStepTracking()">啟用真實步數</button>
+        <div class="privacy-note" id="stepStatus">真實步數會在你開始使用 app 後自動啟用；手機可能會要求動作感測器權限。</div>
       </div>
       <div class="bar-block">
         <div class="bar-label"><span>親密度</span><span class="num" id="bondBarLabel">62%</span></div>
@@ -636,6 +635,7 @@ const VISIT_LOG_KEY = 'footprintVisitLogs:v1';
 let lastStepDate = todayKey();
 let stepTracker = {
   enabled: false,
+  requested: false,
   supported: false,
   lastMagnitude: 0,
   lastStepAt: 0,
@@ -755,6 +755,8 @@ function handleMotionStep(event){
 }
 
 async function enableStepTracking(){
+  if(stepTracker.enabled || stepTracker.requested) return;
+  stepTracker.requested = true;
   if(!window.isSecureContext){
     updateStepStatus('真實步數需要 HTTPS 或 localhost。');
     toast('真實步數需要 HTTPS');
@@ -788,6 +790,13 @@ async function enableStepTracking(){
   }
 }
 
+function armAutomaticStepTracking(){
+  const start = () => enableStepTracking();
+  window.addEventListener('pointerdown', start, { once:true, passive:true });
+  window.addEventListener('touchstart', start, { once:true, passive:true });
+  window.addEventListener('keydown', start, { once:true });
+}
+
 function recordVisitBackend(location){
   window.FootprintOnline?.recordVisit?.({
     id: location.id,
@@ -810,6 +819,7 @@ document.addEventListener('visibilitychange', () => {
   persistStepLog();
   if(document.visibilityState === 'visible') checkStepDateRollover();
 });
+armAutomaticStepTracking();
 
 const QUEST_OPTIONS = {
   times: ['40 分鐘', '1 小時', '2 小時', '1 天'],
@@ -2342,9 +2352,6 @@ function renderPet(){
   document.getElementById('petLevel').textContent = 'Lv.'+state.level;
   document.getElementById('stepBarLabel').textContent = state.steps.toLocaleString()+' / '+state.stepGoal.toLocaleString();
   document.getElementById('stepBar').style.width = Math.min(100, state.steps/state.stepGoal*100)+'%';
-  const stepBtn = document.getElementById('stepStartBtn');
-  if(stepBtn) stepBtn.textContent = stepTracker.enabled ? '真實步數記錄中' : '啟用真實步數';
-  if(stepBtn) stepBtn.disabled = !!stepTracker.enabled;
   if(stepTracker.enabled) updateStepStatus(`真實步數記錄中・今日 ${state.steps.toLocaleString()} 步`);
   document.getElementById('bondBarLabel').textContent = state.bond+'%';
   document.getElementById('bondBar').style.width = state.bond+'%';

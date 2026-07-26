@@ -15,6 +15,8 @@ test('html-first mobile app opens map list, detail sheet, pet and collection tab
   await page.locator('.navbtn[data-tab="pet"]').click();
   await expect(page.locator('#screen-pet')).toHaveClass(/active/);
   await expect(page.locator('#petHolder svg')).toBeVisible();
+  await expect(page.locator('#screen-pet')).not.toContainText('啟用真實步數');
+  await expect(page.locator('#stepStatus')).toContainText('真實步數');
 
   await page.locator('.navbtn[data-tab="book"]').click();
   await expect(page.locator('#screen-book')).toHaveClass(/active/);
