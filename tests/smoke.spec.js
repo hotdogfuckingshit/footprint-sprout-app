@@ -160,6 +160,42 @@ test('online tab renders safe offline state before Firebase is configured', asyn
   await expect(page.locator('#toast')).toContainText('請先登入');
 });
 
+test('quick login prompts for a display name when Firebase is configured', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="online"]').click();
+  await page.evaluate(() => {
+    window.FOOTPRINT_FIREBASE_CONFIG = {
+      apiKey: 'test-key',
+      authDomain: 'test.firebaseapp.com',
+      databaseURL: 'https://test.firebaseio.com',
+      projectId: 'test',
+      appId: 'test-app',
+    };
+    window.quickLoginName = '';
+    window.FootprintOnline = {
+      quickSignIn(displayName) {
+        window.quickLoginName = displayName;
+      },
+    };
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-out',
+      user: null,
+      friendCode: '',
+      friends: [],
+      party: null,
+      partyInvites: [],
+      sharing: false,
+    });
+  });
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('輸入使用者名稱');
+    await dialog.accept('阿曼');
+  });
+  await page.getByRole('button', { name: '快速登入' }).click();
+  await expect.poll(() => page.evaluate(() => window.quickLoginName)).toBe('阿曼');
+});
+
 test('online tab switches to signed-in UI when auth snapshot arrives', async ({ page }) => {
   await page.context().grantPermissions(['geolocation'], { origin: 'http://localhost:5173' });
   await page.context().setGeolocation({ latitude: 24.1815, longitude: 120.6449 });

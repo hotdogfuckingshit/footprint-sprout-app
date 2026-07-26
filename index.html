@@ -1065,7 +1065,9 @@ function renderOnline(){
     </div>
   ` : `
     <div class="empty-online">${ready ? '用 Google 登入後，就能產生好友碼並同步位置。' : '請先在 GitHub Secrets 補 Firebase 設定，部署後就會啟用。'}</div>
-    <button class="btn btn-primary" style="margin-top:10px;" onclick="onlineSignIn()">使用 Google 登入</button>
+    <button class="btn btn-primary" style="margin-top:10px;" onclick="onlineQuickSignIn()">快速登入</button>
+    <button class="btn btn-ghost" onclick="onlineSignIn()">使用 Google 登入</button>
+    <div class="privacy-note">如果在 Instagram、LINE 或手機內建瀏覽器看到 Firebase missing initial state，請改用快速登入，或用 Safari/Chrome 開啟此頁。</div>
   `;
 
   codeBox.innerHTML = signedIn ? `<span class="num">${escapeHtml(onlineState.friendCode || '----')}</span><button class="btn btn-ghost" onclick="copyFriendCode()">複製</button>` : `<span class="num">----</span><button class="btn btn-ghost" onclick="copyFriendCode()">複製</button>`;
@@ -1193,6 +1195,13 @@ function escapeHtml(value){
 function onlineSignIn(){
   if(!firebaseConfigured()){ toast('請先設定 Firebase 連線參數'); return; }
   window.FootprintOnline?.signIn?.();
+}
+
+function onlineQuickSignIn(){
+  if(!firebaseConfigured()){ toast('請先設定 Firebase 連線參數'); return; }
+  const displayName = (prompt('輸入使用者名稱', '') || '').trim();
+  if(displayName.length < 2){ toast('使用者名稱至少 2 個字'); return; }
+  window.FootprintOnline?.quickSignIn?.(displayName);
 }
 
 function onlineSignOut(){
@@ -2139,6 +2148,7 @@ const configured = ['apiKey','authDomain','databaseURL','projectId','appId'].eve
 if(!configured){
   window.FootprintOnline = {
     signIn(){ window.toast?.('請先設定 Firebase 連線參數'); },
+    quickSignIn(){ window.toast?.('請先設定 Firebase 連線參數'); },
     signOut(){},
     updateDisplayName(){ window.toast?.('請先設定 Firebase 連線參數'); },
     addFriendByCode(){ window.toast?.('請先設定 Firebase 連線參數'); },
@@ -2152,7 +2162,7 @@ if(!configured){
 } else {
   const [
     { initializeApp },
-    { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut: firebaseSignOut, updateProfile },
+    { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signInAnonymously, signOut: firebaseSignOut, updateProfile },
     {
       getDatabase, ref, get, set, update, remove, onValue,
       query, orderByChild, equalTo, onDisconnect,
@@ -2331,7 +2341,38 @@ if(!configured){
       try {
         await signInWithPopup(auth, provider);
       } catch (error) {
-        window.toast?.(`登入失敗：${error.code || error.message}`);
+        const message = error?.code || error?.message || String(error);
+        window.toast?.(`Google 登入失敗，請改用快速登入：${message}`);
+      }
+    },
+    async quickSignIn(displayName){
+      const cleanName = String(displayName || '').trim().slice(0, 18);
+      if(cleanName.length < 2) return window.toast?.('使用者名稱至少 2 個字');
+      try {
+        const credential = await signInAnonymously(auth);
+        currentUser = credential.user;
+        await updateProfile(credential.user, { displayName: cleanName });
+        await update(ref(db, `users/${credential.user.uid}`), {
+          uid: credential.user.uid,
+          displayName: cleanName,
+          email: '',
+          photoURL: '',
+          friendCode: codeFromUid(credential.user.uid),
+          lastSeenAt: Date.now(),
+        });
+        emit({
+          user: { ...userView(credential.user), displayName: cleanName },
+          friendCode: codeFromUid(credential.user.uid),
+          status: 'signed-in',
+        });
+        window.toast?.('快速登入成功');
+      } catch (error) {
+        const message = error?.code || error?.message || String(error);
+        if(String(message).includes('admin-restricted-operation') || String(message).includes('operation-not-allowed')){
+          window.toast?.('快速登入尚未啟用：請到 Firebase Authentication 開啟 Anonymous 登入');
+          return;
+        }
+        window.toast?.(`快速登入失敗：${message}`);
       }
     },
     async signOut(){
