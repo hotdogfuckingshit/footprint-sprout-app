@@ -1487,6 +1487,44 @@ function friendDistanceText(friend){
   return d.meters >= 1000 ? `${(d.meters / 1000).toFixed(1)} km` : `${d.meters} m`;
 }
 
+function friendLocationSummary(friend){
+  const point = validLatLng(friend?.location);
+  if(!point) return '尚未分享位置';
+  const accuracy = Number(friend.location.accuracy);
+  const accuracyText = Number.isFinite(accuracy) && accuracy > 0
+    ? `約 ${Math.round(accuracy).toLocaleString()} m 範圍`
+    : '未提供精度';
+  return `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}・${accuracyText}`;
+}
+
+function friendMapUrl(friend){
+  const point = validLatLng(friend?.location);
+  if(!point) return '#';
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${point.lat},${point.lng}`)}`;
+}
+
+function friendInfoHtml(friend){
+  const point = validLatLng(friend?.location);
+  const name = escapeHtml(friend?.displayName || '好友');
+  const distance = escapeHtml(friendDistanceText(friend));
+  const updated = escapeHtml(friend?.location?.updatedAt ? timeAgo(friend.location.updatedAt) : '剛剛');
+  const summary = escapeHtml(friendLocationSummary(friend));
+  const mapUrl = escapeHtml(friendMapUrl(friend));
+  const approxNote = point ? '座標為好友分享的裝置定位；精度越小越接近實際位置。' : '尚未取得好友位置。';
+  return `
+    <div style="min-width:210px; max-width:260px; font-family:'Noto Sans TC',sans-serif; color:#1C2541;">
+      <div style="font-weight:900; font-size:15px; margin-bottom:4px;">${name}</div>
+      <div style="font-size:12px; line-height:1.6;">
+        <div><b>距離</b>：${distance}</div>
+        <div><b>位置</b>：${summary}</div>
+        <div><b>更新</b>：${updated}</div>
+      </div>
+      <div style="font-size:11px; color:#5C6B8A; line-height:1.45; margin-top:6px;">${escapeHtml(approxNote)}</div>
+      ${point ? `<a href="${mapUrl}" target="_blank" rel="noopener" style="display:inline-block; margin-top:8px; color:#17A673; font-weight:900; text-decoration:none;">在 Google Maps 開啟</a>` : ''}
+    </div>
+  `;
+}
+
 function isSharingToFriend(uid){
   if(!uid) return false;
   return new Set(onlineState.shareTargetUids || []).has(uid);
@@ -1678,12 +1716,25 @@ function renderFriendMarkers(){
       zIndex: 998,
     });
     marker.addListener('click', () => {
-      showTab('online');
-      toast(`${friend.displayName || '好友'}：${friendDistanceText(friend)}`);
+      openFriendInfo(friend, marker);
     });
     marker.friendUid = friend.uid;
     return marker;
   });
+}
+
+function openFriendInfo(friend, marker = null){
+  if(!map || !window.google?.maps) return;
+  const friendPoint = validLatLng(friend?.location);
+  if(!friendPoint){ toast('這位好友尚未分享位置'); return; }
+  if(!friendInfoWindow) friendInfoWindow = new google.maps.InfoWindow();
+  friendInfoWindow.setContent(friendInfoHtml(friend));
+  if(marker) friendInfoWindow.open({ map, anchor: marker });
+  else {
+    friendInfoWindow.setPosition(friendPoint);
+    friendInfoWindow.open({ map });
+  }
+  document.getElementById('mapBadge').textContent = `📍 ${friend.displayName || '好友'}・${friendDistanceText(friend)}`;
 }
 
 function mapOriginPoint(){
@@ -1718,14 +1769,18 @@ function focusFriendOnMap(uid){
   if(!friendPoint){ toast('這位好友尚未分享位置'); return; }
   showTab('map');
   toggleMapFullscreen(true);
-  setTimeout(() => fitMapToPoints([mapOriginPoint(), friendPoint], 8), 120);
+  setTimeout(() => {
+    fitMapToPoints([mapOriginPoint(), friendPoint], 8);
+    const marker = friendMarkers.find((item) => item.friendUid === uid) || null;
+    openFriendInfo(friend, marker);
+  }, 160);
   toast(`${friend.displayName || '好友'}：${friendDistanceText(friend)}`);
 }
 
 /* ================= 真正的 Google Maps（需要你自己的 API 金鑰） ================= */
 const DEFAULT_MAP_ZOOM = 14;
 const USER_LOCATION_ZOOM = 15;
-let map, userMarker, mapMarkers = [], friendMarkers = [];
+let map, userMarker, friendInfoWindow, mapMarkers = [], friendMarkers = [];
 let lastMapTouchAt = 0;
 let lastMapTouchEventAt = 0;
 let pendingMapExitTimer = null;

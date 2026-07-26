@@ -463,6 +463,67 @@ test('friend distance only appears after both sides share locations', async ({ p
   await expect(page.locator('#friendList')).toContainText('57 m');
 });
 
+test('friend map info shows distance and approximate location details', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const info = await page.evaluate(() => {
+    window.infoWindowState = {};
+    map = {};
+    window.google = {
+      maps: {
+        SymbolPath: { CIRCLE: 'circle' },
+        Marker: class Marker {
+          constructor(options) {
+            this.options = options;
+            this.listeners = {};
+            window.lastFriendMarker = this;
+          }
+          setMap() {}
+          addListener(name, callback) {
+            this.listeners[name] = callback;
+          }
+        },
+        InfoWindow: class InfoWindow {
+          setContent(content) { window.infoWindowState.content = content; }
+          setPosition(position) { window.infoWindowState.position = position; }
+          open(options) { window.infoWindowState.openOptions = options; }
+        },
+      },
+    };
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: { uid: 'me', displayName: '城市玩家', email: 'me@example.com' },
+      friendCode: 'ABC12345',
+      sharing: true,
+      shareTargetUids: ['friend-1'],
+      myLocation: { lat: 24.1815, lng: 120.6449, updatedAt: Date.now() },
+      friends: [
+        {
+          uid: 'friend-1',
+          displayName: '好友J',
+          location: {
+            lat: 35.6812,
+            lng: 139.7671,
+            accuracy: 32,
+            updatedAt: Date.now(),
+          },
+        },
+      ],
+      party: null,
+      partyInvites: [],
+    });
+    window.lastFriendMarker.listeners.click();
+    return window.infoWindowState;
+  });
+
+  expect(info.content).toContain('好友J');
+  expect(info.content).toContain('距離');
+  expect(info.content).toContain('35.68120, 139.76710');
+  expect(info.content).toContain('約 32 m 範圍');
+  expect(info.content).toContain('google.com/maps/search');
+  expect(info.openOptions.anchor).toBeTruthy();
+});
+
 test('walk party creation sends invites only to checked friends and does not overwrite an active party', async ({ page }) => {
   await page.goto('http://localhost:5173');
   await page.locator('.navbtn[data-tab="online"]').click();
