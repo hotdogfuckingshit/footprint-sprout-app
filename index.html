@@ -267,7 +267,7 @@ body{
 
 /* profile */
 .profile-card{margin:8px 16px; background:var(--paper); border-radius:22px; padding:18px; box-shadow:var(--shadow); text-align:center;}
-.profile-avatar{width:70px;height:70px;border-radius:22px; margin:0 auto 10px; background:linear-gradient(135deg,var(--coral),var(--sun)); display:flex;align-items:center;justify-content:center; font-size:32px; color:#fff; font-weight:900; overflow:hidden;}
+.profile-avatar{width:70px;height:70px;border-radius:50%; margin:0 auto 10px; background:linear-gradient(135deg,var(--coral),var(--sun)); display:flex;align-items:center;justify-content:center; font-size:32px; color:#fff; font-weight:900; overflow:hidden;}
 .profile-avatar.avatar-photo{background:#fff;}
 .profile-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
 .profile-card h3{margin:0 0 2px; font-size:16px; color:var(--ink);}
@@ -303,7 +303,7 @@ body{
 .online-input-row input{min-width:0; width:100%; border:1px solid var(--line); border-radius:14px; padding:13px 14px; font:inherit; font-size:16px; color:var(--ink); background:#F8FCFF; letter-spacing:.8px; text-transform:uppercase;}
 .friend-card{display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line);}
 .friend-card:first-child{border-top:0;}
-.friend-avatar{width:40px; height:40px; border-radius:14px; background:linear-gradient(135deg,var(--sun),var(--coral)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; overflow:hidden; flex:0 0 40px;}
+.friend-avatar{width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,var(--sun),var(--coral)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; overflow:hidden; flex:0 0 40px;}
 .friend-avatar.avatar-photo{background:#fff;}
 .friend-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
 .friend-main{min-width:0; flex:1;}
@@ -1280,6 +1280,7 @@ function receiveOnlineSnapshot(snapshot){
   renderOnline();
   renderProfile();
   renderFriendMarkers();
+  placeUserMarker();
   handleNotificationLaunch();
 }
 window.receiveOnlineSnapshot = receiveOnlineSnapshot;
@@ -1581,6 +1582,46 @@ function setAvatarElement(element, person, fallback){
   element.innerHTML = url ? `<img src="${escapeHtml(url)}" alt="">` : escapeHtml(avatarText(fallback));
 }
 
+function mapAvatarIcon(person, options = {}){
+  const maps = window.google?.maps;
+  const photoURL = avatarUrl(person);
+  const fillColor = options.fillColor || '#7C5CFC';
+  const strokeColor = options.strokeColor || '#fff';
+  const strokeWeight = Number(options.strokeWeight ?? 4);
+  const size = Number(options.size || 44);
+  if(!photoURL || !maps){
+    return {
+      path: maps?.SymbolPath?.CIRCLE,
+      scale: Number(options.fallbackScale || 18),
+      fillColor,
+      fillOpacity: 1,
+      strokeColor,
+      strokeWeight,
+    };
+  }
+  const center = size / 2;
+  const innerRadius = Math.max(4, center - strokeWeight);
+  const imageSize = innerRadius * 2;
+  const imageOffset = center - innerRadius;
+  const safeUrl = escapeHtml(photoURL);
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <defs><clipPath id="avatarClip"><circle cx="${center}" cy="${center}" r="${innerRadius}"/></clipPath></defs>
+      <circle cx="${center}" cy="${center}" r="${center - 1}" fill="${escapeHtml(fillColor)}"/>
+      <image href="${safeUrl}" xlink:href="${safeUrl}" x="${imageOffset}" y="${imageOffset}" width="${imageSize}" height="${imageSize}" preserveAspectRatio="xMidYMid slice" clip-path="url(#avatarClip)"/>
+      <circle cx="${center}" cy="${center}" r="${center - strokeWeight / 2}" fill="none" stroke="${escapeHtml(strokeColor)}" stroke-width="${strokeWeight}"/>
+    </svg>
+  `;
+  const icon = {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+  };
+  if(maps.Size) icon.scaledSize = new maps.Size(size, size);
+  else icon.scaledSize = { width: size, height: size };
+  if(maps.Point) icon.anchor = new maps.Point(center, center);
+  else icon.anchor = { x: center, y: center };
+  return icon;
+}
+
 function escapeHtml(value){
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 }
@@ -1798,19 +1839,19 @@ function renderFriendMarkers(){
   if(!map || !window.google?.maps) return;
   friendMarkers.forEach((marker) => marker.setMap(null));
   friendMarkers = onlineState.friends.map((friend) => ({friend, position: validLatLng(friend.location)})).filter((item) => item.position).map(({friend, position}) => {
+    const hasPhoto = !!avatarUrl(friend);
     const marker = new google.maps.Marker({
       position,
       map,
       title: friend.displayName || '好友',
-      label: { text: avatarText(friend.displayName || '友'), color: '#fff', fontSize: '12px', fontWeight: '800' },
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 18,
+      ...(hasPhoto ? {} : { label: { text: avatarText(friend.displayName || '友'), color: '#fff', fontSize: '12px', fontWeight: '800' } }),
+      icon: mapAvatarIcon(friend, {
+        fallbackScale: 18,
         fillColor: '#7C5CFC',
-        fillOpacity: 1,
         strokeColor: '#fff',
         strokeWeight: 4,
-      },
+        size: 46,
+      }),
       zIndex: 998,
     });
     marker.addListener('click', () => {
@@ -2078,10 +2119,18 @@ function renderMapMarkers(){
 function placeUserMarker(){
   if(!map) return;
   if(userMarker) userMarker.setMap(null);
+  const hasPhoto = !!avatarUrl(onlineState.user);
   userMarker = new google.maps.Marker({
     position:{lat:HERE.lat, lng:HERE.lng},
     map,
-    icon:{path:google.maps.SymbolPath.CIRCLE, scale:9, fillColor:'#FF6B5B', fillOpacity:1, strokeColor:'#fff', strokeWeight:3},
+    ...(hasPhoto ? { title: onlineState.user?.displayName || '我' } : {}),
+    icon: hasPhoto ? mapAvatarIcon(onlineState.user, {
+      fillColor: '#FF6B5B',
+      strokeColor: '#fff',
+      strokeWeight: 4,
+      size: 48,
+      fallbackScale: 9,
+    }) : {path:google.maps.SymbolPath.CIRCLE, scale:9, fillColor:'#FF6B5B', fillOpacity:1, strokeColor:'#fff', strokeWeight:3},
     zIndex:999
   });
 }

@@ -401,8 +401,75 @@ test('profile avatar can be uploaded and rendered as a photo', async ({ page }) 
   });
 
   await expect(page.locator('#profileAvatar img')).toBeVisible();
+  await expect(page.locator('#profileAvatar')).toHaveCSS('border-radius', '50%');
   const saved = await page.evaluate(() => window.avatarSaved);
   expect(saved).toMatch(/^data:image\/(webp|jpeg|png);base64,/);
+});
+
+test('uploaded avatars render as round map markers', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(() => {
+    window.createdMarkers = [];
+    const photoURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGUlEQVR42mP8z8Dwn4GBgYGJgYGB4T8ABWwCAu7RlVwAAAAASUVORK5CYII=';
+    map = {};
+    window.google = {
+      maps: {
+        SymbolPath: { CIRCLE: 'circle' },
+        Size: class Size {
+          constructor(width, height) {
+            this.width = width;
+            this.height = height;
+          }
+        },
+        Point: class Point {
+          constructor(x, y) {
+            this.x = x;
+            this.y = y;
+          }
+        },
+        Marker: class Marker {
+          constructor(options) {
+            this.options = options;
+            window.createdMarkers.push(this);
+          }
+          setMap() {}
+          addListener() {}
+        },
+      },
+    };
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: { uid: 'me', displayName: '城市玩家', email: 'me@example.com', photoURL },
+      friendCode: 'ABC12345',
+      sharing: true,
+      shareTargetUids: ['friend-1'],
+      myLocation: { lat: 24.1815, lng: 120.6449, updatedAt: Date.now() },
+      friends: [
+        {
+          uid: 'friend-1',
+          displayName: '好友J',
+          photoURL,
+          location: { lat: 35.6812, lng: 139.7671, accuracy: 32, updatedAt: Date.now() },
+        },
+      ],
+      party: null,
+      partyInvites: [],
+    });
+    const friendMarker = window.createdMarkers.find((marker) => marker.options.title === '好友J');
+    const userMarker = window.createdMarkers.find((marker) => marker.options.title === '城市玩家');
+    return {
+      friendIconUrl: friendMarker?.options.icon?.url || '',
+      friendHasLabel: Boolean(friendMarker?.options.label),
+      userIconUrl: userMarker?.options.icon?.url || '',
+      userSize: userMarker?.options.icon?.scaledSize,
+    };
+  });
+
+  expect(result.friendIconUrl).toContain('data:image/svg+xml');
+  expect(result.friendHasLabel).toBe(false);
+  expect(result.userIconUrl).toContain('data:image/svg+xml');
+  expect(result.userSize).toEqual({ width: 48, height: 48 });
 });
 
 test('friend code input is readable on mobile and party invite can be accepted', async ({ page }) => {
@@ -516,6 +583,7 @@ test('friend map info shows distance and approximate location details', async ({
   await page.goto('http://localhost:5173');
   const info = await page.evaluate(() => {
     window.infoWindowState = {};
+    window.createdMarkers = [];
     map = {};
     window.google = {
       maps: {
@@ -524,7 +592,7 @@ test('friend map info shows distance and approximate location details', async ({
           constructor(options) {
             this.options = options;
             this.listeners = {};
-            window.lastFriendMarker = this;
+            window.createdMarkers.push(this);
           }
           setMap() {}
           addListener(name, callback) {
@@ -561,7 +629,7 @@ test('friend map info shows distance and approximate location details', async ({
       party: null,
       partyInvites: [],
     });
-    window.lastFriendMarker.listeners.click();
+    window.createdMarkers.find((marker) => marker.options.title === '好友J').listeners.click();
     return window.infoWindowState;
   });
 
