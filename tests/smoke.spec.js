@@ -49,6 +49,45 @@ test('map category chips keep the tapped category active after real places load'
   await expect(page.locator('#filterRow .chip').filter({ hasText: '全部' })).not.toHaveClass(/active/);
 });
 
+test('map category changes keep the list scroll position visible', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(async () => {
+    const screen = document.getElementById('screen-map');
+    window.loadNearbyPlaces = async () => ({
+      provider: 'google',
+      places: [
+        {
+          id: 'mock-cafe',
+          name: '測試咖啡店',
+          latitude: 24.1815,
+          longitude: 120.6449,
+          category: 'cafe',
+          types: ['cafe', 'food', 'point_of_interest'],
+          address: '台中市測試路 1 號',
+          source: 'google',
+        },
+      ],
+    });
+    window.focusOwnLocation = () => {
+      screen.scrollTop = 0;
+    };
+    screen.scrollTop = 260;
+    const before = screen.scrollTop;
+    setFilter('cafe');
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return {
+      before,
+      after: screen.scrollTop,
+      active: document.querySelector('#filterRow .chip.active')?.textContent,
+      listText: document.getElementById('locList').textContent,
+    };
+  });
+
+  expect(result.active).toBe('咖啡');
+  expect(result.listText).toContain('測試咖啡店');
+  expect(result.after).toBeGreaterThanOrEqual(result.before);
+});
+
 test('pet generator requires and accepts an uploaded image', async ({ page }) => {
   await page.goto('http://localhost:5173');
   await page.locator('.navbtn[data-tab="me"]').click();

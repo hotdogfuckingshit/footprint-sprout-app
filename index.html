@@ -2140,9 +2140,10 @@ function placeUserMarker(){
   下面這段是正式串接的寫法，金鑰生效、且已在 Console 啟用 Places API 後就能直接運作：
   它會用使用者「當下的真實座標」去查附近真實店家，而不是只查我們預先寫死的西屯 8 個地點。
 */
-async function fetchNearbyRealPlaces(filter = currentFilter){
+async function fetchNearbyRealPlaces(filter = currentFilter, options = {}){
   const requestedFilter = filter;
   const apiLayer = layerForApi(requestedFilter);
+  const savedScrollTop = options.preserveScroll ? currentMapScrollTop() : null;
   try {
     document.getElementById('locateNote').textContent = '正在同步附近真實地點...';
     const data = await loadNearbyPlaces(apiLayer);
@@ -2158,6 +2159,7 @@ async function fetchNearbyRealPlaces(filter = currentFilter){
     renderList();
     renderMapMarkers();
     focusOwnLocation(DEFAULT_MAP_ZOOM);
+    if(options.preserveScroll) restoreMapScroll(savedScrollTop);
     document.getElementById('mapBadge').textContent = `📍 ${data.provider === 'google' ? 'Google Places' : 'OpenStreetMap'}・真實地點`;
     document.getElementById('locateNote').textContent = `已載入 ${places.length} 個附近真實地點，點卡片可看店名與導航`;
     toast(`已同步 ${places.length} 個真實地點`);
@@ -2473,7 +2475,26 @@ function renderFilters(){
   const row=document.getElementById('filterRow');
   row.innerHTML = FILTERS.map(([k,l])=>`<div class="chip ${k===currentFilter?'active':''}" onclick="setFilter('${k}')">${l}</div>`).join('');
 }
-function setFilter(k){ currentFilter=k; renderFilters(); renderList(); fetchNearbyRealPlaces(k); }
+function currentMapScrollTop(){
+  return Number(document.getElementById('screen-map')?.scrollTop || 0);
+}
+function restoreMapScroll(scrollTop){
+  const screen = document.getElementById('screen-map');
+  if(!screen || !Number.isFinite(scrollTop)) return;
+  const restore = () => {
+    if(screen.scrollTop < scrollTop) screen.scrollTop = Math.min(scrollTop, screen.scrollHeight);
+  };
+  restore();
+  requestAnimationFrame(restore);
+}
+function setFilter(k){
+  const savedScrollTop = currentMapScrollTop();
+  currentFilter=k;
+  renderFilters();
+  renderList();
+  restoreMapScroll(savedScrollTop);
+  fetchNearbyRealPlaces(k, { preserveScroll: true });
+}
 
 function renderList(){
   const list = document.getElementById('locList');
