@@ -23,6 +23,32 @@ test('html-first mobile app opens map list, detail sheet, pet and collection tab
   await expect(page.locator('#galGrid .gcard').first()).toBeVisible();
 });
 
+test('map category chips keep the tapped category active after real places load', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.evaluate(() => {
+    window.loadNearbyPlaces = async (layer) => ({
+      provider: 'google',
+      places: [
+        {
+          id: `mock-${layer}`,
+          name: '測試咖啡店',
+          latitude: 24.1815,
+          longitude: 120.6449,
+          category: 'cafe',
+          types: ['cafe', 'food', 'point_of_interest'],
+          address: '台中市測試路 1 號',
+          source: 'google',
+        },
+      ],
+    });
+  });
+
+  await page.getByText('咖啡', { exact: true }).click();
+  await expect(page.locator('#filterRow .chip.active')).toHaveText('咖啡');
+  await expect(page.locator('#locList')).toContainText('測試咖啡店');
+  await expect(page.locator('#filterRow .chip').filter({ hasText: '全部' })).not.toHaveClass(/active/);
+});
+
 test('pet generator requires and accepts an uploaded image', async ({ page }) => {
   await page.goto('http://localhost:5173');
   await page.locator('.navbtn[data-tab="me"]').click();
