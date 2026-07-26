@@ -267,11 +267,15 @@ body{
 
 /* profile */
 .profile-card{margin:8px 16px; background:var(--paper); border-radius:22px; padding:18px; box-shadow:var(--shadow); text-align:center;}
-.profile-avatar{width:70px;height:70px;border-radius:22px; margin:0 auto 10px; background:linear-gradient(135deg,var(--coral),var(--sun)); display:flex;align-items:center;justify-content:center; font-size:32px;}
+.profile-avatar{width:70px;height:70px;border-radius:22px; margin:0 auto 10px; background:linear-gradient(135deg,var(--coral),var(--sun)); display:flex;align-items:center;justify-content:center; font-size:32px; color:#fff; font-weight:900; overflow:hidden;}
+.profile-avatar.avatar-photo{background:#fff;}
+.profile-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
 .profile-card h3{margin:0 0 2px; font-size:16px; color:var(--ink);}
 .profile-card p{margin:0; font-size:12px; color:var(--ink-soft);}
 .profile-edit{margin-top:14px; display:flex; flex-direction:column; gap:8px;}
 .profile-edit input{width:100%; border:1px solid var(--line); border-radius:14px; padding:12px 13px; font:inherit; font-size:16px; color:var(--ink); background:#F8FCFF;}
+.avatar-upload-btn{position:relative; display:flex; align-items:center; justify-content:center; min-height:46px; border:1px dashed #B9D6E5; border-radius:14px; background:#EEF8FF; color:var(--ink); font-weight:900; font-size:14px; cursor:pointer;}
+.avatar-upload-btn input{position:absolute; inset:0; opacity:0; cursor:pointer;}
 .profile-login-note{margin-top:12px; color:var(--ink-soft); font-size:12.5px; line-height:1.6;}
 .frag-big{margin:16px 16px 6px; background:linear-gradient(135deg,#7C5CFC,#9B7BFF); border-radius:22px; padding:18px; color:#fff; box-shadow:var(--shadow);}
 .frag-big .row{display:flex; justify-content:space-between; align-items:center;}
@@ -299,7 +303,9 @@ body{
 .online-input-row input{min-width:0; width:100%; border:1px solid var(--line); border-radius:14px; padding:13px 14px; font:inherit; font-size:16px; color:var(--ink); background:#F8FCFF; letter-spacing:.8px; text-transform:uppercase;}
 .friend-card{display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line);}
 .friend-card:first-child{border-top:0;}
-.friend-avatar{width:40px; height:40px; border-radius:14px; background:linear-gradient(135deg,var(--sun),var(--coral)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900;}
+.friend-avatar{width:40px; height:40px; border-radius:14px; background:linear-gradient(135deg,var(--sun),var(--coral)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; overflow:hidden; flex:0 0 40px;}
+.friend-avatar.avatar-photo{background:#fff;}
+.friend-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
 .friend-main{min-width:0; flex:1;}
 .friend-name{font-size:13px; font-weight:900; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .friend-meta{font-size:11px; color:var(--ink-soft); margin-top:2px;}
@@ -1285,6 +1291,7 @@ function renderProfile(){
   const edit = document.getElementById('profileEdit');
   if(!avatar || !name || !meta || !edit) return;
   if(!onlineState.user){
+    avatar.classList.remove('avatar-photo');
     avatar.textContent = '?';
     name.textContent = '請先登入';
     meta.textContent = '登入後可以設定使用者名稱、同步好友定位與散步小隊。';
@@ -1295,10 +1302,14 @@ function renderProfile(){
     return;
   }
   const displayName = onlineState.user.displayName || '玩家';
-  avatar.textContent = avatarText(displayName);
+  setAvatarElement(avatar, onlineState.user, displayName);
   name.textContent = displayName;
   meta.textContent = onlineState.user.email || '已登入';
   edit.innerHTML = `
+    <label class="avatar-upload-btn">
+      <input id="profileAvatarInput" type="file" accept="image/*" onchange="saveProfileAvatar(event)">
+      <span>上傳圖片當作頭貼</span>
+    </label>
     <input id="profileNameInput" maxlength="18" value="${escapeHtml(displayName)}" placeholder="輸入使用者名稱">
     <button class="btn btn-primary" onclick="saveProfileName()">儲存使用者名稱</button>
   `;
@@ -1323,7 +1334,7 @@ function renderOnline(){
   status.textContent = ready ? (signedIn ? '已連線，可以和好友同步位置' : 'Firebase 已設定，請登入') : '尚未設定 Firebase，連線功能先以離線狀態顯示';
   auth.innerHTML = signedIn ? `
     <div class="friend-card">
-      <div class="friend-avatar">${avatarText(onlineState.user.displayName || '我')}</div>
+      ${avatarMarkup(onlineState.user, onlineState.user.displayName || '我')}
       <div class="friend-main">
         <div class="friend-name">${escapeHtml(onlineState.user.displayName || '玩家')}</div>
         <div class="friend-meta">${escapeHtml(onlineState.user.email || '已登入')}</div>
@@ -1373,7 +1384,7 @@ function renderOnline(){
     partyStatus.className = '';
     partyStatus.innerHTML = onlineState.partyInvites.map((invite) => `
       <div class="friend-card">
-        <div class="friend-avatar">${avatarText(invite.hostName || '隊')}</div>
+        ${avatarMarkup({ photoURL: invite.hostPhotoURL }, invite.hostName || '隊')}
         <div class="friend-main">
           <div class="friend-name">${escapeHtml(invite.hostName || '好友')} 邀請你散步</div>
           <div class="friend-meta">${escapeHtml(invite.goal || '一起散步')}</div>
@@ -1425,7 +1436,7 @@ function renderShareTargetPicker(container, signedIn){
         return `
           <label class="share-choice">
             <input type="checkbox" ${selected ? 'checked' : ''} onchange="toggleShareFriend('${escapeHtml(friend.uid)}', this.checked)">
-            <div class="friend-avatar">${avatarText(friend.displayName || '友')}</div>
+            ${avatarMarkup(friend, friend.displayName || '友')}
             <div class="friend-main">
               <div class="friend-name">${escapeHtml(friend.displayName || '好友')}</div>
               <div class="friend-meta">${meta}</div>
@@ -1450,7 +1461,7 @@ function renderPartyInvitePicker(container, signedIn){
       ${onlineState.friends.map((friend) => `
         <label class="party-choice">
           <input type="checkbox" ${selectedInviteUids.has(friend.uid) ? 'checked' : ''} onchange="toggleInviteFriend('${escapeHtml(friend.uid)}', this.checked)">
-          <div class="friend-avatar">${avatarText(friend.displayName || '友')}</div>
+          ${avatarMarkup(friend, friend.displayName || '友')}
           <div class="friend-main">
             <div class="friend-name">${escapeHtml(friend.displayName || '好友')}</div>
             <div class="friend-meta">${friend.location ? '已分享位置' : '尚未分享位置'}</div>
@@ -1465,7 +1476,7 @@ function friendCardHtml(friend){
   const distance = friendDistanceText(friend);
   return `
     <div class="friend-card" onclick="${friend.location ? `focusFriendOnMap('${escapeHtml(friend.uid)}')` : ''}">
-      <div class="friend-avatar">${avatarText(friend.displayName || '友')}</div>
+      ${avatarMarkup(friend, friend.displayName || '友')}
       <div class="friend-main">
         <div class="friend-name">${escapeHtml(friend.displayName || '好友')}</div>
         <div class="friend-meta">${friend.location ? `更新 ${timeAgo(friend.location.updatedAt)}` : '尚未分享位置'}</div>
@@ -1552,8 +1563,79 @@ function avatarText(name){
   return String(name || '友').trim().slice(0, 1).toUpperCase();
 }
 
+function avatarUrl(person){
+  const url = String(person?.photoURL || '').trim();
+  if(!url) return '';
+  if(url.startsWith('data:image/') || /^https?:\/\//i.test(url)) return url;
+  return '';
+}
+
+function avatarMarkup(person, fallback){
+  const url = avatarUrl(person);
+  return `<div class="friend-avatar${url ? ' avatar-photo' : ''}">${url ? `<img src="${escapeHtml(url)}" alt="">` : escapeHtml(avatarText(fallback))}</div>`;
+}
+
+function setAvatarElement(element, person, fallback){
+  const url = avatarUrl(person);
+  element.classList.toggle('avatar-photo', !!url);
+  element.innerHTML = url ? `<img src="${escapeHtml(url)}" alt="">` : escapeHtml(avatarText(fallback));
+}
+
 function escapeHtml(value){
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+
+function loadImageFromFile(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('圖片讀取失敗'));
+      image.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error('圖片讀取失敗'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function canvasToDataUrl(canvas, type, quality){
+  return new Promise((resolve) => {
+    if(canvas.toBlob){
+      canvas.toBlob((blob) => {
+        if(!blob){
+          resolve(canvas.toDataURL(type, quality));
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      }, type, quality);
+      return;
+    }
+    resolve(canvas.toDataURL(type, quality));
+  });
+}
+
+async function compressAvatarFile(file){
+  if(!file || !file.type.startsWith('image/')) throw new Error('請選擇圖片檔');
+  if(file.size > 8 * 1024 * 1024) throw new Error('圖片太大，請選 8MB 以下的照片');
+  const image = await loadImageFromFile(file);
+  const size = 320;
+  const sourceSize = Math.min(image.naturalWidth || image.width, image.naturalHeight || image.height);
+  const sx = ((image.naturalWidth || image.width) - sourceSize) / 2;
+  const sy = ((image.naturalHeight || image.height) - sourceSize) / 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, size, size);
+  ctx.drawImage(image, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+  let output = await canvasToDataUrl(canvas, 'image/webp', 0.76);
+  if(output.length > 420000) output = await canvasToDataUrl(canvas, 'image/jpeg', 0.72);
+  if(output.length > 520000) throw new Error('頭貼壓縮後仍太大，請換一張照片');
+  return output;
 }
 
 function onlineSignIn(){
@@ -1602,6 +1684,22 @@ function saveProfileName(){
   const displayName = input.value.trim();
   if(displayName.length < 2){ toast('使用者名稱至少 2 個字'); return; }
   window.FootprintOnline?.updateDisplayName?.(displayName);
+}
+
+async function saveProfileAvatar(event){
+  if(!onlineState.user){ toast('請先登入'); return; }
+  const input = event?.target;
+  const file = input?.files?.[0];
+  if(!file) return;
+  try {
+    toast('正在處理頭貼...');
+    const photoURL = await compressAvatarFile(file);
+    await window.FootprintOnline?.updateAvatar?.(photoURL);
+  } catch (error) {
+    toast(`頭貼上傳失敗：${error?.message || error}`);
+  } finally {
+    if(input) input.value = '';
+  }
 }
 
 function addFriendByCode(){
@@ -2782,15 +2880,16 @@ if(!configured){
     const existing = snap.val() || {};
     const friendCode = existing.friendCode || codeFromUid(user.uid);
     const displayName = existing.displayName || user.displayName || '玩家';
+    const photoURL = existing.photoURL || user.photoURL || '';
     await update(userRef, {
       uid: user.uid,
       displayName,
       email: user.email || '',
-      photoURL: user.photoURL || '',
+      photoURL,
       friendCode,
       lastSeenAt: Date.now(),
     });
-    return { ...existing, uid: user.uid, displayName, friendCode };
+    return { ...existing, uid: user.uid, displayName, photoURL, friendCode };
   }
 
   function clearFriendDetailListeners(){
@@ -3017,7 +3116,7 @@ if(!configured){
     });
     try {
       const profile = await ensureUser(user);
-      emit({ user: { ...userView(user), displayName: profile.displayName }, friendCode: profile.friendCode, status: 'signed-in' });
+      emit({ user: { ...userView(user), displayName: profile.displayName, photoURL: profile.photoURL || '' }, friendCode: profile.friendCode, status: 'signed-in' });
       subscribeFriends(user.uid);
       subscribeParty(user.uid);
       subscribePartyInvites(user.uid);
@@ -3092,10 +3191,27 @@ if(!configured){
           displayName: cleanName,
           updatedAt: Date.now(),
         });
-        emit({ user: { ...userView(currentUser), displayName: cleanName } });
+        emit({ user: { ...userView(currentUser), ...onlineState.user, displayName: cleanName } });
         window.toast?.('使用者名稱已更新');
       } catch (error) {
         window.toast?.(`儲存使用者名稱失敗：${firebaseMessage(error)}`);
+      }
+    },
+    async updateAvatar(photoURL){
+      if(!currentUser) return window.toast?.('請先登入');
+      const cleanPhotoURL = String(photoURL || '').trim();
+      if(!cleanPhotoURL.startsWith('data:image/') && !/^https?:\/\//i.test(cleanPhotoURL)){
+        return window.toast?.('頭貼格式不正確');
+      }
+      try {
+        await update(ref(db, `users/${currentUser.uid}`), {
+          photoURL: cleanPhotoURL,
+          updatedAt: Date.now(),
+        });
+        emit({ user: { ...userView(currentUser), ...onlineState.user, photoURL: cleanPhotoURL } });
+        window.toast?.('頭貼已更新');
+      } catch (error) {
+        window.toast?.(`儲存頭貼失敗：${firebaseMessage(error)}`);
       }
     },
     async addFriendByCode(code){
@@ -3268,6 +3384,7 @@ if(!configured){
         }
         const partyId = currentUser.uid;
         const displayName = onlineState.user?.displayName || currentUser.displayName || '玩家';
+        const photoURL = avatarUrl(onlineState.user) || '';
         const friends = onlineState.friends || [];
         const selected = new Set(Array.isArray(inviteUids) ? inviteUids : []);
         const inviteFriends = selected.size ? friends.filter((friend) => selected.has(friend.uid)) : [];
@@ -3278,7 +3395,7 @@ if(!configured){
           goal: '一起散步',
           startedAt: Date.now(),
           members: {
-            [currentUser.uid]: { uid: currentUser.uid, displayName, joinedAt: Date.now() },
+            [currentUser.uid]: { uid: currentUser.uid, displayName, photoURL, joinedAt: Date.now() },
           },
         };
         const updates = {
@@ -3291,6 +3408,7 @@ if(!configured){
               partyId,
               hostUid: currentUser.uid,
               hostName: displayName,
+              hostPhotoURL: photoURL,
               goal: data.goal,
               createdAt: Date.now(),
             };
@@ -3315,8 +3433,9 @@ if(!configured){
           return;
         }
         const displayName = onlineState.user?.displayName || currentUser.displayName || '玩家';
+        const photoURL = avatarUrl(onlineState.user) || '';
         await update(ref(db), {
-          [`parties/${targetPartyId}/members/${currentUser.uid}`]: { uid: currentUser.uid, displayName, joinedAt: Date.now() },
+          [`parties/${targetPartyId}/members/${currentUser.uid}`]: { uid: currentUser.uid, displayName, photoURL, joinedAt: Date.now() },
           [`userParties/${currentUser.uid}`]: { partyId: targetPartyId, role: 'member', joinedAt: Date.now() },
           [`partyInvites/${currentUser.uid}/${targetPartyId}`]: null,
         });

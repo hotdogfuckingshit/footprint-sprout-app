@@ -356,6 +356,55 @@ test('profile tab prompts before login and lets signed-in users change display n
   await expect(page.locator('#profileName')).toHaveText('阿曼');
 });
 
+test('profile avatar can be uploaded and rendered as a photo', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="me"]').click();
+  await page.evaluate(() => {
+    window.avatarSaved = '';
+    window.FootprintOnline = {
+      updateAvatar(photoURL) {
+        window.avatarSaved = photoURL;
+        window.receiveOnlineSnapshot({
+          user: {
+            uid: 'test-user',
+            displayName: '城市玩家',
+            email: 'test@example.com',
+            photoURL,
+          },
+        });
+      },
+    };
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: {
+        uid: 'test-user',
+        displayName: '城市玩家',
+        email: 'test@example.com',
+        photoURL: '',
+      },
+      friendCode: 'ABC12345',
+      friends: [],
+      party: null,
+      partyInvites: [],
+      sharing: false,
+    });
+  });
+
+  await page.locator('#profileAvatarInput').setInputFiles({
+    name: 'avatar.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGUlEQVR42mP8z8Dwn4GBgYGJgYGB4T8ABWwCAu7RlVwAAAAASUVORK5CYII=',
+      'base64',
+    ),
+  });
+
+  await expect(page.locator('#profileAvatar img')).toBeVisible();
+  const saved = await page.evaluate(() => window.avatarSaved);
+  expect(saved).toMatch(/^data:image\/(webp|jpeg|png);base64,/);
+});
+
 test('friend code input is readable on mobile and party invite can be accepted', async ({ page }) => {
   await page.goto('http://localhost:5173');
   await page.locator('.navbtn[data-tab="online"]').click();
