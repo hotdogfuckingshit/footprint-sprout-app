@@ -636,6 +636,7 @@ let lastStepDate = todayKey();
 let stepTracker = {
   enabled: false,
   requested: false,
+  requestInFlight: false,
   supported: false,
   lastMagnitude: 0,
   lastStepAt: 0,
@@ -754,15 +755,22 @@ function handleMotionStep(event){
   }
 }
 
-async function enableStepTracking(){
-  if(stepTracker.enabled || stepTracker.requested) return;
+async function enableStepTracking(fromUserGesture = false){
+  if(stepTracker.enabled || stepTracker.requestInFlight) return;
+  if('DeviceMotionEvent' in window && typeof DeviceMotionEvent.requestPermission === 'function' && !fromUserGesture && navigator.userActivation && !navigator.userActivation.isActive){
+    updateStepStatus('真實步數會在你下一次點擊 app 時啟用。');
+    return;
+  }
+  stepTracker.requestInFlight = true;
   stepTracker.requested = true;
   if(!window.isSecureContext){
+    stepTracker.requestInFlight = false;
     updateStepStatus('真實步數需要 HTTPS 或 localhost。');
     toast('真實步數需要 HTTPS');
     return;
   }
   if(!('DeviceMotionEvent' in window)){
+    stepTracker.requestInFlight = false;
     updateStepStatus('這台裝置或瀏覽器不支援動作感測器，無法用網頁直接計步。');
     toast('此瀏覽器不支援真實步數');
     return;
@@ -771,6 +779,7 @@ async function enableStepTracking(){
     if(typeof DeviceMotionEvent.requestPermission === 'function'){
       const permission = await DeviceMotionEvent.requestPermission();
       if(permission !== 'granted'){
+        stepTracker.requestInFlight = false;
         updateStepStatus('你尚未允許動作感測器，因此不能計步。');
         toast('動作感測器未允許');
         return;
@@ -781,20 +790,27 @@ async function enableStepTracking(){
       stepTracker.enabled = true;
     }
     stepTracker.supported = true;
+    stepTracker.requestInFlight = false;
     updateStepStatus('真實步數已啟用。頁面留在背景時會盡量持續記錄；被系統休眠或滑掉後會停止。');
     toast('真實步數已啟用');
     persistStepLog();
   } catch (error) {
+    stepTracker.requestInFlight = false;
+    if(String(error?.message || error).toLowerCase().includes('user gesture')){
+      stepTracker.requested = false;
+      updateStepStatus('真實步數需要由你點擊 app 後啟用，請再點一下畫面。');
+      return;
+    }
     updateStepStatus(`真實步數啟用失敗：${error?.message || error}`);
     toast('真實步數啟用失敗');
   }
 }
 
 function armAutomaticStepTracking(){
-  const start = () => enableStepTracking();
-  window.addEventListener('pointerdown', start, { once:true, passive:true });
-  window.addEventListener('touchstart', start, { once:true, passive:true });
-  window.addEventListener('keydown', start, { once:true });
+  const start = () => enableStepTracking(true);
+  window.addEventListener('click', start, { passive:true });
+  window.addEventListener('touchend', start, { passive:true });
+  window.addEventListener('keydown', start);
 }
 
 function recordVisitBackend(location){
