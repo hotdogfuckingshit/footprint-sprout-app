@@ -969,6 +969,48 @@ function questDirectionText(from, to){
   return `${ns}${ew || ''}` || '附近';
 }
 
+function bearingDegrees(from, to){
+  const toRad = (deg) => deg * Math.PI / 180;
+  const toDeg = (rad) => rad * 180 / Math.PI;
+  const lat1 = toRad(from.lat);
+  const lat2 = toRad(to.lat);
+  const dLng = toRad(to.lng - from.lng);
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return Math.round((toDeg(Math.atan2(y, x)) + 360) % 360);
+}
+
+function bearingName(degrees){
+  const names = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];
+  return names[Math.round(degrees / 45) % 8];
+}
+
+function questLegGuide(from, to){
+  const d = haversineSteps(from.lat, from.lng, to.lat, to.lng);
+  const bearing = bearingDegrees(from, to);
+  const minutes = Math.max(2, Math.round(d.meters / 72));
+  const nearMeters = Math.min(90, Math.max(45, Math.round(d.meters * 0.18)));
+  return {
+    meters: d.meters,
+    steps: d.steps,
+    minutes,
+    bearing,
+    direction: bearingName(bearing),
+    nearMeters,
+  };
+}
+
+function renderQuestGuide(guide, activeLocation){
+  const precise = guide.meters >= 1000 ? `${(guide.meters / 1000).toFixed(1)} km` : `${guide.meters} m`;
+  return `
+    <div class="quest-checks">
+      <div class="quest-check pass"><span>➤</span><span><b>方向</b><br>朝 ${guide.direction} 方前進，約 ${guide.bearing}°。</span></div>
+      <div class="quest-check pass"><span>◎</span><span><b>距離</b><br>本段約 ${precise}，大約 ${guide.steps.toLocaleString()} 步，步行約 ${guide.minutes} 分鐘。</span></div>
+      <div class="quest-check pass"><span>◇</span><span><b>抵達判定</b><br>靠近目標 ${guide.nearMeters} m 內時，尋找「${activeLocation.tag}」類型的公開可停留地點，再完成照片任務。</span></div>
+    </div>
+  `;
+}
+
 function pickQuestRoute(){
   const minutes = minutesForQuest(questState.selectedTime);
   const count = routeSizeForQuest(minutes);
@@ -1033,9 +1075,10 @@ function renderQuest(){
   const previous = questState.taskIndex === 0 ? {lat:HERE.lat,lng:HERE.lng} : questState.route[questState.taskIndex - 1];
   const task = QUEST_TASKS[questState.taskIndex % QUEST_TASKS.length];
   const percent = Math.round(((questState.taskIndex) / questState.route.length) * 100);
+  const guide = questLegGuide(previous, activeLocation);
   const destinationText = questState.taskIndex === questState.route.length - 1 && questState.phase === 'checked'
     ? `終點揭露：${activeLocation.name}`
-    : `下一段往 ${questDirectionText(previous, activeLocation)}，約 ${activeLocation.distSteps.toLocaleString()} 步內尋找線索`;
+    : `朝 ${guide.direction} 前進約 ${guide.meters >= 1000 ? (guide.meters / 1000).toFixed(1) + ' km' : guide.meters + ' m'}`;
   card.innerHTML = `
     <div class="quest-head">
       <div>
@@ -1049,6 +1092,7 @@ function renderQuest(){
     <div class="quest-task">
       <h3>${task.title}</h3>
       <p>${task.hint}</p>
+      ${renderQuestGuide(guide, activeLocation)}
       ${renderQuestValidation()}
       <input class="quest-photo-input" id="questPhotoInput" type="file" accept="image/*" onchange="handleQuestPhoto(event)">
       <div class="quest-actions">

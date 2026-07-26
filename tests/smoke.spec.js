@@ -256,6 +256,10 @@ test('blind quest planner starts hidden route and validates a city photo', async
   await page.getByRole('button', { name: '開始盲盒路線' }).click();
 
   await expect(page.locator('#questCard')).toContainText('盲盒路線進行中');
+  await expect(page.locator('#questCard')).toContainText('方向');
+  await expect(page.locator('#questCard')).toContainText('距離');
+  await expect(page.locator('#questCard')).toContainText('抵達判定');
+  await expect(page.locator('#questCard')).toContainText('步行約');
   await expect(page.locator('#questCard')).toContainText('上傳任務照片驗證');
 
   const svg = `
