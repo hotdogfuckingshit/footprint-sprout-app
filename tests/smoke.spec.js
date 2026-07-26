@@ -483,7 +483,8 @@ test('walk party creation sends invites only to checked friends and does not ove
 
 test('map double click enters fullscreen and does not exit while zooming', async ({ page }) => {
   await page.goto('http://localhost:5173');
-  await page.locator('#mapWrap').dblclick();
+  await expect(page.locator('.map-expand-btn')).toBeVisible();
+  await page.locator('.map-expand-btn').click();
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   const fullscreenMetrics = await page.evaluate(() => {
     const wrap = document.getElementById('mapWrap').getBoundingClientRect();
@@ -501,16 +502,20 @@ test('map double click enters fullscreen and does not exit while zooming', async
       exitZ: Number(exitStyle.zIndex),
       friendsZ: Number(friendsStyle.zIndex),
       recenterZ: Number(recenterStyle.zIndex),
+      googleFullscreenVisible: [...document.querySelectorAll('.gm-fullscreen-control')].some((el) => getComputedStyle(el).display !== 'none'),
+      googleCameraVisible: [...document.querySelectorAll('#map button[title="Map camera controls"], #map button[aria-label="Map camera controls"]')].some((el) => getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0),
     };
   });
-  expect(fullscreenMetrics.heightRatio).toBeGreaterThanOrEqual(0.5);
+  expect(fullscreenMetrics.heightRatio).toBeGreaterThanOrEqual(0.65);
   expect(fullscreenMetrics.exitZoneTop).toBeGreaterThanOrEqual(fullscreenMetrics.mapBottom - 2);
-  expect(fullscreenMetrics.exitPosition).toBe('fixed');
-  expect(fullscreenMetrics.friendsPosition).toBe('fixed');
-  expect(fullscreenMetrics.recenterPosition).toBe('fixed');
-  expect(fullscreenMetrics.exitZ).toBeGreaterThanOrEqual(250);
-  expect(fullscreenMetrics.friendsZ).toBeGreaterThanOrEqual(250);
-  expect(fullscreenMetrics.recenterZ).toBeGreaterThanOrEqual(250);
+  expect(fullscreenMetrics.exitPosition).toBe('absolute');
+  expect(fullscreenMetrics.friendsPosition).toBe('absolute');
+  expect(fullscreenMetrics.recenterPosition).toBe('absolute');
+  expect(fullscreenMetrics.exitZ).toBeGreaterThanOrEqual(260);
+  expect(fullscreenMetrics.friendsZ).toBeGreaterThanOrEqual(260);
+  expect(fullscreenMetrics.recenterZ).toBeGreaterThanOrEqual(260);
+  expect(fullscreenMetrics.googleFullscreenVisible).toBe(false);
+  expect(fullscreenMetrics.googleCameraVisible).toBe(false);
   await expect(page.locator('.map-exit-btn')).toBeVisible();
   await expect(page.locator('.map-friends-btn')).toBeVisible();
   await expect(page.locator('.map-recenter-btn')).toBeVisible();
