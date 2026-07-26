@@ -485,6 +485,34 @@ test('map double click enters fullscreen and does not exit while zooming', async
   await page.goto('http://localhost:5173');
   await page.locator('#mapWrap').dblclick();
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
+  const fullscreenMetrics = await page.evaluate(() => {
+    const wrap = document.getElementById('mapWrap').getBoundingClientRect();
+    const exitZone = document.getElementById('mapExitZone').getBoundingClientRect();
+    const exitStyle = getComputedStyle(document.querySelector('.map-exit-btn'));
+    const friendsStyle = getComputedStyle(document.querySelector('.map-friends-btn'));
+    const recenterStyle = getComputedStyle(document.querySelector('.map-recenter-btn'));
+    return {
+      heightRatio: wrap.height / window.innerHeight,
+      exitZoneTop: exitZone.top,
+      mapBottom: wrap.bottom,
+      exitPosition: exitStyle.position,
+      friendsPosition: friendsStyle.position,
+      recenterPosition: recenterStyle.position,
+      exitZ: Number(exitStyle.zIndex),
+      friendsZ: Number(friendsStyle.zIndex),
+      recenterZ: Number(recenterStyle.zIndex),
+    };
+  });
+  expect(fullscreenMetrics.heightRatio).toBeGreaterThanOrEqual(0.5);
+  expect(fullscreenMetrics.exitZoneTop).toBeGreaterThanOrEqual(fullscreenMetrics.mapBottom - 2);
+  expect(fullscreenMetrics.exitPosition).toBe('fixed');
+  expect(fullscreenMetrics.friendsPosition).toBe('fixed');
+  expect(fullscreenMetrics.recenterPosition).toBe('fixed');
+  expect(fullscreenMetrics.exitZ).toBeGreaterThanOrEqual(250);
+  expect(fullscreenMetrics.friendsZ).toBeGreaterThanOrEqual(250);
+  expect(fullscreenMetrics.recenterZ).toBeGreaterThanOrEqual(250);
+  await expect(page.locator('.map-exit-btn')).toBeVisible();
+  await expect(page.locator('.map-friends-btn')).toBeVisible();
   await expect(page.locator('.map-recenter-btn')).toBeVisible();
   await page.locator('#mapWrap').dblclick();
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
