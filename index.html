@@ -91,9 +91,15 @@ body{
 /* map screen */
 .map-wrap{margin:0 16px 12px; border-radius:22px; overflow:hidden; box-shadow:var(--shadow); border:3px solid var(--paper); position:relative;}
 .map-wrap iframe{width:100%; height:210px; border:0; display:block;}
-.map-wrap.map-fullscreen{position:fixed; inset:0; z-index:220; margin:0; border-radius:0; border:0; box-shadow:none; background:#fff;}
+.map-wrap.map-fullscreen{position:fixed; top:0; left:0; right:0; bottom:auto; height:var(--map-fullscreen-height, clamp(360px, calc(100% - 190px), calc(100% - 120px))); z-index:220; margin:0; border-radius:0 0 24px 24px; border:0; box-shadow:0 14px 28px rgba(28,37,65,0.18); background:#fff;}
 .map-wrap.map-fullscreen #map{height:100% !important;}
 .map-wrap.map-fullscreen .map-badge{bottom:18px; left:18px;}
+.map-exit-zone{display:none;}
+.map-exit-zone.active{display:block; position:fixed; left:0; right:0; top:var(--map-fullscreen-height, clamp(360px, calc(100% - 190px), calc(100% - 120px))); bottom:0; z-index:221; background:transparent; cursor:pointer;}
+.screen.map-fullscreen-active{overflow:hidden;}
+.screen.map-fullscreen-active .mapline-actions,
+.screen.map-fullscreen-active .filter-row,
+.screen.map-fullscreen-active #locList{pointer-events:none;}
 .map-exit-btn{display:none; position:absolute; top:8px; left:8px; background:var(--ink); color:#fff; border:none; border-radius:999px; padding:7px 12px; font-size:11.5px; font-weight:900; box-shadow:var(--shadow); cursor:pointer; font-family:inherit; z-index:2;}
 .map-wrap.map-fullscreen .map-exit-btn{display:block;}
 .map-friends-btn{display:none; position:absolute; top:48px; left:8px; background:var(--paper); color:var(--leaf-dark); border:none; border-radius:999px; padding:7px 12px; font-size:11.5px; font-weight:900; box-shadow:var(--shadow); cursor:pointer; font-family:inherit; z-index:2;}
@@ -403,6 +409,7 @@ body{
         <button class="map-friends-btn" onclick="fitFriendMapBounds(); event.stopPropagation();">查看好友</button>
         <button class="locate-btn" onclick="locateMe()" id="locateBtn">🎯 定位我</button>
       </div>
+      <div class="map-exit-zone" id="mapExitZone" onclick="toggleMapFullscreen(false)" aria-label="退出全螢幕地圖"></div>
       <div class="mapline-actions">
         <button class="mini-link" onclick="openGoogleMapsHere()">在 Google Maps 開啟</button>
         <span class="mini-note" id="locateNote">點「定位我」使用你目前的實際位置</span>
@@ -1489,7 +1496,11 @@ function toggleMapFullscreen(force){
   const wrap = document.getElementById('mapWrap');
   if(!wrap) return;
   const next = typeof force === 'boolean' ? force : !wrap.classList.contains('map-fullscreen');
+  const screen = document.getElementById('screen-map');
+  const exitZone = document.getElementById('mapExitZone');
   wrap.classList.toggle('map-fullscreen', next);
+  screen?.classList.toggle('map-fullscreen-active', next);
+  exitZone?.classList.toggle('active', next);
   document.body.style.overflow = next ? 'hidden' : '';
   resizeMapSoon(next);
 }
@@ -1540,24 +1551,15 @@ function handleMapTouchEnd(event){
   const wrap = document.getElementById('mapWrap');
   if(!wrap) return;
   const now = Date.now();
+  if(wrap.classList.contains('map-fullscreen')){
+    lastMapTouchAt = now;
+    return;
+  }
   if(!wrap.classList.contains('map-fullscreen') && now - lastMapTouchAt < 320){
     event.preventDefault();
     toggleMapFullscreen(true);
     lastMapTouchAt = 0;
     return;
-  }
-  if(wrap.classList.contains('map-fullscreen')){
-    if(now - lastMapTouchAt < 320){
-      clearTimeout(pendingMapExitTimer);
-      pendingMapExitTimer = null;
-      lastMapTouchAt = 0;
-      return;
-    }
-    clearTimeout(pendingMapExitTimer);
-    pendingMapExitTimer = setTimeout(() => {
-      toggleMapFullscreen(false);
-      pendingMapExitTimer = null;
-    }, 260);
   }
   lastMapTouchAt = now;
 }
@@ -1567,11 +1569,7 @@ function handleMapClick(event){
   if(isMapControlTarget(event)) return;
   const wrap = document.getElementById('mapWrap');
   if(wrap?.classList.contains('map-fullscreen')){
-    clearTimeout(pendingMapExitTimer);
-    pendingMapExitTimer = setTimeout(() => {
-      toggleMapFullscreen(false);
-      pendingMapExitTimer = null;
-    }, 260);
+    return;
   }
 }
 

@@ -459,6 +459,9 @@ test('map double click enters fullscreen and does not exit while zooming', async
   await page.locator('#mapWrap').dblclick();
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await page.locator('#mapWrap').click({ position: { x: 250, y: 250 } });
+  await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
+  await expect(page.locator('#mapExitZone')).toHaveClass(/active/);
+  await page.locator('#mapExitZone').click();
   await expect(page.locator('#mapWrap')).not.toHaveClass(/map-fullscreen/);
   await page.locator('#mapWrap').dblclick();
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
