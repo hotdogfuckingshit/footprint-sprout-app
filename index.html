@@ -233,6 +233,7 @@ body{
 .pet-stage-wrap .grass{position:absolute; bottom:0; left:0; right:0; height:36px; background:repeating-linear-gradient(90deg, var(--leaf) 0 6px, #1FBE84 6px 12px); clip-path:polygon(0 40%,5% 10%,10% 45%,15% 5%,20% 40%,25% 15%,30% 45%,35% 10%,40% 42%,45% 8%,50% 40%,55% 12%,60% 45%,65% 5%,70% 40%,75% 15%,80% 45%,85% 8%,90% 40%,95% 12%,100% 42%,100% 100%,0 100%);}
 .pet-name-row{display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:2px;}
 .pet-name-row h2{margin:0; font-size:19px; font-weight:900; color:var(--ink);}
+.pet-name-edit{border:0; border-radius:999px; padding:4px 9px; background:#EAFBF3; color:var(--leaf-dark); font-family:inherit; font-size:11px; font-weight:900; box-shadow:var(--shadow); cursor:pointer;}
 .lvl-badge{background:var(--coral); color:#fff; font-size:11px; font-weight:800; padding:3px 10px; border-radius:999px;}
 .pet-sub{font-size:12px; color:var(--ink-soft); margin-bottom:14px;}
 .pet-svg-holder{position:relative; height:150px; display:flex; align-items:center; justify-content:center;}
@@ -243,6 +244,7 @@ body{
 .bar-fill{height:100%; border-radius:99px;}
 .bar-fill.step{background:linear-gradient(90deg,var(--sun),#FFB020);}
 .bar-fill.bond{background:linear-gradient(90deg,var(--coral),#FF8F82);}
+.bar-fill.hatch{background:linear-gradient(90deg,var(--leaf),#63C7B2);}
 
 .equip-title{padding:14px 18px 8px; font-size:14px; font-weight:900; color:var(--ink); display:flex; justify-content:space-between; align-items:center;}
 .equip-title span.n{font-size:11.5px; font-weight:700; color:var(--ink-soft);}
@@ -444,10 +446,16 @@ body{
     <div class="screen" id="screen-pet">
       <div class="section-title">我的寵物</div>
       <div class="pet-stage-wrap">
-        <div class="pet-name-row"><h2 id="petName">小豆</h2><span class="lvl-badge num" id="petLevel">Lv.3</span></div>
+        <div class="pet-name-row"><h2 id="petName">小豆</h2><span class="lvl-badge num" id="petLevel">Lv.3</span><button class="pet-name-edit" id="petNameEdit" onclick="renamePetEgg()">命名</button></div>
         <div class="pet-sub">誕生自一張咖啡拉花照片・西屯限定血統</div>
         <div class="pet-svg-holder" id="petHolder"></div>
         <div class="grass"></div>
+      </div>
+
+      <div class="bar-block">
+        <div class="bar-label"><span>孵化進度</span><span class="num" id="hatchBarLabel">0 / 100</span></div>
+        <div class="bar-track"><div class="bar-fill hatch" id="hatchBar" style="width:0%"></div></div>
+        <div class="privacy-note" id="hatchHint">完成照片任務、盲盒路線或首次到訪地點，就能讓寵物蛋慢慢孵化。</div>
       </div>
 
       <div class="bar-block">
@@ -643,6 +651,11 @@ let state = {
   stepGoal: 8000,
   bond: 62,
   level: 1,
+  eggName: '小芽蛋',
+  petName: '小豆',
+  hatchPoints: 0,
+  hatchGoal: 100,
+  hatched: false,
   petColor: '#FF8A6B',
   visited: {},        // id -> {date}
   equipped: [],        // accessory ids currently worn
@@ -652,6 +665,7 @@ let state = {
 
 const STEP_LOG_KEY = 'footprintStepLogs:v1';
 const VISIT_LOG_KEY = 'footprintVisitLogs:v1';
+const PET_LOG_KEY = 'footprintPetLog:v1';
 let lastStepDate = todayKey();
 let stepTracker = {
   enabled: false,
@@ -687,11 +701,18 @@ function writeJsonStore(key, value){
 function loadLocalProgress(){
   const stepLogs = readJsonStore(STEP_LOG_KEY, {});
   const visitLogs = readJsonStore(VISIT_LOG_KEY, {});
+  const petLog = readJsonStore(PET_LOG_KEY, {});
   const today = todayKey();
   state.steps = Math.max(0, Number(stepLogs[today]?.steps || 0));
   state.level = Math.max(1, Math.floor(state.steps / 3000) + 1);
   state.visited = visitLogs.visited || {};
   state.equipped = Array.isArray(visitLogs.equipped) ? visitLogs.equipped : state.equipped;
+  state.eggName = String(petLog.eggName || state.eggName).slice(0, 12);
+  state.petName = String(petLog.petName || state.petName || state.eggName).slice(0, 12);
+  state.hatchPoints = Math.max(0, Math.floor(Number(petLog.hatchPoints) || 0));
+  state.hatchGoal = Math.max(1, Math.floor(Number(petLog.hatchGoal) || state.hatchGoal));
+  state.hatched = Boolean(petLog.hatched) || state.hatchPoints >= state.hatchGoal;
+  if(state.hatched) state.petName = state.petName || state.eggName;
 }
 
 function persistStepLog(){
@@ -710,6 +731,17 @@ function persistVisitLog(){
   writeJsonStore(VISIT_LOG_KEY, {
     visited: state.visited,
     equipped: state.equipped,
+    updatedAt: Date.now(),
+  });
+}
+
+function persistPetLog(){
+  writeJsonStore(PET_LOG_KEY, {
+    eggName: state.eggName,
+    petName: state.petName,
+    hatchPoints: state.hatchPoints,
+    hatchGoal: state.hatchGoal,
+    hatched: state.hatched,
     updatedAt: Date.now(),
   });
 }
@@ -1132,6 +1164,7 @@ async function handleQuestPhoto(event){
   questState.validation = result;
   if(result.ok){
     questState.phase = 'checked';
+    awardHatchPoints(8, '照片任務');
     toast('照片任務通過，下一段線索已準備好');
   } else {
     toast('照片還不符合任務，請重拍或使用安全略過');
@@ -1179,6 +1212,7 @@ function completeBlindQuest(){
   state.fragments += reward;
   state.bond = Math.min(100, state.bond + 5);
   state.level = Math.max(state.level, Math.floor(state.steps / 3000) + 1);
+  awardHatchPoints(30, '盲盒路線');
   const finalLoc = questState.route.at(-1);
   const entry = {
     id: `route-${Date.now()}`,
@@ -2321,6 +2355,28 @@ function locateMe(){
 */
 
 /* ================= RENDER: PET SVG ================= */
+function eggSVG(size, progress = 0){
+  const crack = Math.max(0, Math.min(100, progress));
+  return `
+  <svg width="${size}" height="${size}" viewBox="0 0 200 200" aria-label="寵物蛋">
+    <defs>
+      <radialGradient id="eggGlow" cx="35%" cy="24%" r="70%">
+        <stop offset="0%" stop-color="#fff" stop-opacity="0.95"/>
+        <stop offset="58%" stop-color="#FFF7D8"/>
+        <stop offset="100%" stop-color="#FFD9C9"/>
+      </radialGradient>
+    </defs>
+    <ellipse cx="100" cy="177" rx="54" ry="10" fill="#000" opacity="0.08"/>
+    <path d="M100 18 C142 18 168 72 164 118 C160 166 130 184 100 184 C70 184 40 166 36 118 C32 72 58 18 100 18 Z" fill="url(#eggGlow)" stroke="#fff" stroke-width="8"/>
+    <path d="M58 112 C76 96 85 128 103 110 C122 92 133 124 150 104" fill="none" stroke="#FFB020" stroke-width="${crack >= 45 ? 6 : 0}" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M70 66 C86 80 112 78 130 56" fill="none" stroke="#63C7B2" stroke-width="8" stroke-linecap="round" opacity="0.75"/>
+    <circle cx="72" cy="100" r="8" fill="#FF8A6B" opacity="0.65"/>
+    <circle cx="132" cy="91" r="7" fill="#7C5CFC" opacity="0.55"/>
+    <path d="M76 44 C90 32 114 30 128 44" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+    ${crack >= 80 ? `<path d="M76 121 L91 111 L105 125 L122 111 L140 121" fill="none" stroke="#1C2541" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.72"/>` : ''}
+  </svg>`;
+}
+
 function petSVG(size, color, accessories){
   const wearHat = accessories.includes('lantern') || accessories.includes('icecream');
   const wearGlasses = accessories.includes('glasses');
@@ -2589,6 +2645,7 @@ function finishCheckin(id){
   state.visited[id] = {date:new Date().toISOString().slice(0,10)};
   if(firstVisit && !state.equipped.includes(acc.id)) state.equipped.push(acc.id);
   state.fragments += 3;
+  if(firstVisit) awardHatchPoints(15, '首次到訪');
   persistVisitLog();
   recordVisitBackend(l);
   renderTop();
@@ -2651,9 +2708,52 @@ function saveMemory(id){
 }
 
 /* ================= PET SCREEN ================= */
+function hatchPercent(){
+  return Math.min(100, Math.round(state.hatchPoints / state.hatchGoal * 100));
+}
+
+function awardHatchPoints(points, reason = '任務'){
+  if(state.hatched) return;
+  const gain = Math.max(0, Math.floor(Number(points) || 0));
+  if(!gain) return;
+  state.hatchPoints = Math.min(state.hatchGoal, state.hatchPoints + gain);
+  if(state.hatchPoints >= state.hatchGoal){
+    state.hatched = true;
+    state.petName = state.petName || state.eggName || '新夥伴';
+    toast(`${state.petName} 孵化了！`);
+  } else {
+    toast(`${reason}完成，寵物蛋孵化 +${gain}`);
+  }
+  persistPetLog();
+  renderTop();
+  if(document.getElementById('screen-pet')?.classList.contains('active')) renderPet();
+}
+
+function renamePetEgg(){
+  const currentName = state.hatched ? state.petName : state.eggName;
+  const label = state.hatched ? '幫寵物取名' : '幫寵物蛋取名';
+  const nextName = (prompt(label, currentName || '') || '').trim().slice(0, 12);
+  if(nextName.length < 1){ toast('名字不能空白'); return; }
+  if(state.hatched) state.petName = nextName;
+  else {
+    state.eggName = nextName;
+    state.petName = nextName;
+  }
+  persistPetLog();
+  renderPet();
+  toast(state.hatched ? '寵物名稱已更新' : '寵物蛋名稱已更新');
+}
+
 function renderPet(){
-  document.getElementById('petHolder').innerHTML = petSVG(150, state.petColor, state.equipped);
-  document.getElementById('petLevel').textContent = 'Lv.'+state.level;
+  const percent = hatchPercent();
+  document.getElementById('petName').textContent = state.hatched ? state.petName : state.eggName;
+  document.getElementById('petHolder').innerHTML = state.hatched ? petSVG(150, state.petColor, state.equipped) : eggSVG(150, percent);
+  document.getElementById('petLevel').textContent = state.hatched ? 'Lv.'+state.level : '孵化中';
+  document.querySelector('#screen-pet .pet-sub').textContent = state.hatched ? '牠會記得和你去過的地方、步數與城市任務。' : '完成任務讓寵物蛋慢慢孵化，孵化後會成為你的城市夥伴。';
+  document.getElementById('petNameEdit').textContent = state.hatched ? '改名' : '命名';
+  document.getElementById('hatchBarLabel').textContent = state.hatched ? '已孵化' : `${state.hatchPoints} / ${state.hatchGoal}`;
+  document.getElementById('hatchBar').style.width = percent+'%';
+  document.getElementById('hatchHint').textContent = state.hatched ? `${state.petName} 已經孵化，繼續散步可以提升等級與履歷。` : `目前 ${percent}%・完成照片任務、盲盒路線或首次到訪地點可增加孵化進度。`;
   document.getElementById('stepBarLabel').textContent = state.steps.toLocaleString()+' / '+state.stepGoal.toLocaleString();
   document.getElementById('stepBar').style.width = Math.min(100, state.steps/state.stepGoal*100)+'%';
   if(stepTracker.enabled) updateStepStatus(`真實步數記錄中・今日 ${state.steps.toLocaleString()} 步`);
@@ -2858,7 +2958,12 @@ function confirmGenerate(){
   }
   state.fragments-=100;
   state.petColor = uploadedPetSource.color;
-  document.getElementById('petName').textContent = uploadedPetSource.fileName.replace(/\.[^.]+$/, '').slice(0, 8) || '新寵物';
+  const generatedName = uploadedPetSource.fileName.replace(/\.[^.]+$/, '').slice(0, 8) || '新寵物';
+  state.petName = generatedName;
+  state.eggName = state.eggName || generatedName;
+  state.hatchPoints = state.hatchGoal;
+  state.hatched = true;
+  persistPetLog();
   renderTop();
   closeModal();
   toast('已依照片主色生成新寵物');

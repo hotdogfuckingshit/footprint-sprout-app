@@ -23,6 +23,38 @@ test('html-first mobile app opens map list, detail sheet, pet and collection tab
   await expect(page.locator('#galGrid .gcard').first()).toBeVisible();
 });
 
+test('pet starts as a named egg and hatches through tasks', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="pet"]').click();
+
+  await expect(page.locator('#petName')).toHaveText('小芽蛋');
+  await expect(page.locator('#petLevel')).toHaveText('孵化中');
+  await expect(page.locator('#hatchBarLabel')).toHaveText('0 / 100');
+  await expect(page.locator('#hatchHint')).toContainText('完成照片任務');
+
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('幫寵物蛋取名');
+    await dialog.accept('阿蛋');
+  });
+  await page.locator('#petNameEdit').click();
+  await expect(page.locator('#petName')).toHaveText('阿蛋');
+
+  const hatch = await page.evaluate(() => {
+    awardHatchPoints(15, '首次到訪');
+    return {
+      points: state.hatchPoints,
+      hatched: state.hatched,
+      stored: JSON.parse(localStorage.getItem('footprintPetLog:v1')),
+    };
+  });
+
+  expect(hatch.points).toBe(15);
+  expect(hatch.hatched).toBe(false);
+  expect(hatch.stored.eggName).toBe('阿蛋');
+  expect(hatch.stored.hatchPoints).toBe(15);
+  await expect(page.locator('#hatchBarLabel')).toHaveText('15 / 100');
+});
+
 test('map category chips keep the tapped category active after real places load', async ({ page }) => {
   await page.goto('http://localhost:5173');
   await page.evaluate(() => {
@@ -135,6 +167,8 @@ test('pet generator requires and accepts an uploaded image', async ({ page }) =>
   await page.locator('#generatePetButton').click();
   await expect(page.locator('#screen-pet')).toHaveClass(/active/);
   await expect(page.locator('#petHolder svg')).toBeVisible();
+  await expect(page.locator('#petLevel')).not.toHaveText('孵化中');
+  await expect(page.locator('#hatchBarLabel')).toHaveText('已孵化');
   await expect(page.locator('#topFrag')).toHaveText('42');
 });
 
