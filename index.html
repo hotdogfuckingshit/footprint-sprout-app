@@ -290,6 +290,13 @@ body{
 .party-choice:first-of-type{border-top:0;}
 .party-choice input{width:20px; height:20px; accent-color:var(--leaf); flex-shrink:0;}
 .party-choice .friend-main{pointer-events:none;}
+.share-picker{margin-top:10px; border:1px solid var(--line); border-radius:16px; padding:10px 12px; background:#F8FCFF;}
+.share-picker-title{font-size:12px; font-weight:900; color:var(--ink); margin-bottom:2px;}
+.share-picker-note{font-size:11px; color:var(--ink-soft); line-height:1.45; margin-bottom:6px;}
+.share-choice{display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--line);}
+.share-choice:first-of-type{border-top:0;}
+.share-choice input{width:20px; height:20px; accent-color:var(--leaf); flex-shrink:0;}
+.share-choice .friend-main{pointer-events:none;}
 .code-box{display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--sky); border-radius:16px; padding:12px; font-weight:900; color:var(--ink);}
 .code-box .num{font-size:20px; letter-spacing:1px;}
 .sharing-dot{width:9px; height:9px; border-radius:50%; background:#B9C6D6; display:inline-block; margin-right:5px;}
@@ -467,7 +474,8 @@ body{
           <button class="btn btn-primary" id="shareLocationBtn" onclick="toggleLocationSharing()">開始分享</button>
           <button class="btn btn-ghost" onclick="sendLocationOnce()">更新一次</button>
         </div>
-        <div class="privacy-note"><span class="sharing-dot" id="sharingDot"></span><span id="sharingText">尚未分享位置</span><br>只會分享給已互加的好友；停止分享後，新的定位不會再送出。</div>
+        <div id="shareTargetPicker"></div>
+        <div class="privacy-note"><span class="sharing-dot" id="sharingDot"></span><span id="sharingText">尚未分享位置</span><br>只有你勾選的好友能看到這次分享的位置；停止分享後，所有定位分享會移除。</div>
       </div>
 
       <div class="online-panel">
@@ -997,10 +1005,13 @@ let onlineState = {
   partyInvites: [],
   myLocation: null,
   sharing: false,
+  shareTargetUids: [],
   lastSharedAt: null,
 };
 let selectedInviteUids = new Set();
 let inviteSelectionTouched = false;
+let selectedShareUids = new Set();
+let shareSelectionTouched = false;
 
 function firebaseConfigured(){
   const cfg = window.FOOTPRINT_FIREBASE_CONFIG || {};
@@ -1008,7 +1019,15 @@ function firebaseConfigured(){
 }
 
 function receiveOnlineSnapshot(snapshot){
+  const previousUid = onlineState.user?.uid || null;
   onlineState = {...onlineState, ...snapshot};
+  const nextUid = onlineState.user?.uid || null;
+  if(previousUid !== nextUid){
+    selectedShareUids = new Set(onlineState.shareTargetUids || []);
+    shareSelectionTouched = false;
+    selectedInviteUids = new Set();
+    inviteSelectionTouched = false;
+  }
   renderOnline();
   renderProfile();
   renderFriendMarkers();
@@ -1051,6 +1070,7 @@ function renderOnline(){
   const shareBtn = document.getElementById('shareLocationBtn');
   const sharingDot = document.getElementById('sharingDot');
   const sharingText = document.getElementById('sharingText');
+  const shareTargetPicker = document.getElementById('shareTargetPicker');
   const partyStatus = document.getElementById('partyStatus');
   const partyInvitePicker = document.getElementById('partyInvitePicker');
   const leavePartyBtn = document.getElementById('leavePartyBtn');
@@ -1076,10 +1096,13 @@ function renderOnline(){
   codeBox.innerHTML = signedIn ? `<span class="num">${escapeHtml(onlineState.friendCode || '----')}</span><button class="btn btn-ghost" onclick="copyFriendCode()">複製</button>` : `<span class="num">----</span><button class="btn btn-ghost" onclick="copyFriendCode()">複製</button>`;
   shareBtn.textContent = onlineState.sharing ? '停止分享' : '開始分享';
   sharingDot.classList.toggle('on', !!onlineState.sharing);
-  sharingText.textContent = onlineState.sharing ? `分享中${onlineState.lastSharedAt ? '・' + timeAgo(onlineState.lastSharedAt) : ''}` : '尚未分享位置';
+  const shareTargetCount = (onlineState.shareTargetUids || []).length;
+  sharingText.textContent = onlineState.sharing ? `分享中・給 ${shareTargetCount} 位好友${onlineState.lastSharedAt ? '・' + timeAgo(onlineState.lastSharedAt) : ''}` : '尚未分享位置';
   if(leavePartyBtn){
     leavePartyBtn.textContent = onlineState.party?.hostUid === onlineState.user?.uid ? '解散小隊' : '離開小隊';
   }
+
+  renderShareTargetPicker(shareTargetPicker, signedIn);
 
   if(!signedIn){
     list.className = 'empty-online';
@@ -1128,6 +1151,48 @@ function syncInviteSelection(){
   }
 }
 
+function syncShareSelection(){
+  const friendIds = new Set((onlineState.friends || []).map((friend) => friend.uid).filter(Boolean));
+  selectedShareUids = new Set([...selectedShareUids].filter((uid) => friendIds.has(uid)));
+  if(!shareSelectionTouched){
+    selectedShareUids = new Set((onlineState.shareTargetUids || []).filter((uid) => friendIds.has(uid)));
+  }
+}
+
+function renderShareTargetPicker(container, signedIn){
+  if(!container) return;
+  syncShareSelection();
+  if(!signedIn){
+    container.innerHTML = '';
+    return;
+  }
+  if(!onlineState.friends.length){
+    container.innerHTML = '<div class="empty-online" style="margin-top:10px;">加入好友後，才能選擇要分享位置給誰。</div>';
+    return;
+  }
+  container.innerHTML = `
+    <div class="share-picker">
+      <div class="share-picker-title">選擇位置分享對象</div>
+      <div class="share-picker-note">每次只會同步給有勾選的好友；可以只選一個人。</div>
+      ${onlineState.friends.map((friend) => {
+        const shared = isSharingToFriend(friend.uid);
+        const selected = selectedShareUids.has(friend.uid);
+        const meta = shared ? (selected ? '目前可看到你的位置' : '取消勾選後，按更新一次才會停止') : (selected ? '按開始分享後可看到你的位置' : '尚未分享給這位好友');
+        return `
+          <label class="share-choice">
+            <input type="checkbox" ${selected ? 'checked' : ''} onchange="toggleShareFriend('${escapeHtml(friend.uid)}', this.checked)">
+            <div class="friend-avatar">${avatarText(friend.displayName || '友')}</div>
+            <div class="friend-main">
+              <div class="friend-name">${escapeHtml(friend.displayName || '好友')}</div>
+              <div class="friend-meta">${meta}</div>
+            </div>
+          </label>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
 function renderPartyInvitePicker(container, signedIn){
   if(!container) return;
   syncInviteSelection();
@@ -1167,7 +1232,7 @@ function friendCardHtml(friend){
 }
 
 function friendDistanceText(friend){
-  if(!onlineState.sharing || !onlineState.myLocation) return '待你分享';
+  if(!isSharingToFriend(friend.uid) || !onlineState.myLocation) return '待你分享';
   if(!friend.location) return '待對方分享';
   const d = haversineSteps(
     Number(onlineState.myLocation.lat),
@@ -1176,6 +1241,11 @@ function friendDistanceText(friend){
     Number(friend.location.lng)
   );
   return d.meters >= 1000 ? `${(d.meters / 1000).toFixed(1)} km` : `${d.meters} m`;
+}
+
+function isSharingToFriend(uid){
+  if(!uid) return false;
+  return new Set(onlineState.shareTargetUids || []).has(uid);
 }
 
 function validLatLng(location){
@@ -1243,9 +1313,8 @@ function copyFriendCode(){
 
 function toggleLocationSharing(){
   if(!onlineState.user){ toast('請先登入'); return; }
-  onlineState.sharing = !onlineState.sharing;
-  if(onlineState.sharing) sendLocationOnce();
-  else window.FootprintOnline?.stopSharing?.();
+  if(onlineState.sharing) window.FootprintOnline?.stopSharing?.();
+  else sendLocationOnce();
   renderOnline();
 }
 
@@ -1265,6 +1334,11 @@ function currentPosition(options = {enableHighAccuracy:true, maximumAge:0, timeo
 
 async function sendLocationOnce(){
   if(!onlineState.user){ toast('請先登入'); return; }
+  const targetUids = [...selectedShareUids].filter(Boolean);
+  if(!targetUids.length){
+    toast('請先勾選要分享位置的好友');
+    return;
+  }
   try {
     const pos = await currentPosition();
     if(!pos.coords || !Number.isFinite(pos.coords.latitude) || !Number.isFinite(pos.coords.longitude)){
@@ -1277,12 +1351,19 @@ async function sendLocationOnce(){
     focusOwnLocation(USER_LOCATION_ZOOM);
     document.getElementById('mapBadge').textContent='📍 已分享你目前的位置';
     const payload = { lat: HERE.lat, lng: HERE.lng, accuracy: pos.coords.accuracy ?? null, updatedAt: Date.now() };
-    window.FootprintOnline?.updateLocation?.(payload);
+    window.FootprintOnline?.updateLocation?.(payload, targetUids);
   } catch (error) {
     onlineState.sharing = false;
     renderOnline();
     toast(error?.message || '無法取得位置，沒有分享');
   }
+}
+
+function toggleShareFriend(uid, checked){
+  shareSelectionTouched = true;
+  if(checked) selectedShareUids.add(uid);
+  else selectedShareUids.delete(uid);
+  renderOnline();
 }
 
 function createWalkParty(){
@@ -2309,9 +2390,9 @@ if(!configured){
   let partyUnsub = null;
   let partyInviteUnsub = null;
   let userPartyUnsub = null;
+  let shareTargetsUnsub = null;
   let activePartyId = null;
   let knownPartyInviteIds = new Set();
-  let locationRef = null;
 
   const emit = (patch) => window.receiveOnlineSnapshot?.({ configured: true, ...patch });
   const codeFromUid = (uid) => uid.replace(/[^a-z0-9]/gi, '').slice(-8).toUpperCase();
@@ -2355,6 +2436,8 @@ if(!configured){
     partyInviteUnsub = null;
     if(userPartyUnsub) userPartyUnsub();
     userPartyUnsub = null;
+    if(shareTargetsUnsub) shareTargetsUnsub();
+    shareTargetsUnsub = null;
     activePartyId = null;
     knownPartyInviteIds = new Set();
   }
@@ -2375,12 +2458,12 @@ if(!configured){
       friendIds.forEach((friendUid) => {
         friendsById[friendUid] = { uid: friendUid };
         const userRef = ref(db, `users/${friendUid}`);
-        const locationRef = ref(db, `locations/${friendUid}`);
+        const sharedLocationRef = ref(db, `locationShares/${uid}/${friendUid}`);
         const userUnsub = onValue(userRef, (userSnap) => {
           friendsById[friendUid] = { ...friendsById[friendUid], ...(userSnap.val() || {}) };
           publish();
         });
-        const locationUnsub = onValue(locationRef, (locationSnap) => {
+        const locationUnsub = onValue(sharedLocationRef, (locationSnap) => {
           const location = locationSnap.val();
           friendsById[friendUid] = { ...friendsById[friendUid], location: location || null };
           publish();
@@ -2391,6 +2474,32 @@ if(!configured){
     }, (error) => {
       emit({ friends: [] });
       window.toast?.(`好友資料讀取失敗：${firebaseMessage(error)}`);
+    });
+  }
+
+  function subscribeShareTargets(uid){
+    if(shareTargetsUnsub) shareTargetsUnsub();
+    const targetsRef = ref(db, `locationShareTargets/${uid}`);
+    shareTargetsUnsub = onValue(targetsRef, (snapshot) => {
+      const targets = snapshot.val() || {};
+      const targetUids = Object.keys(targets);
+      const latestTarget = Object.values(targets).reduce((latest, target) => Number(target?.updatedAt || 0) > Number(latest?.updatedAt || 0) ? target : latest, null);
+      const latest = Number(latestTarget?.updatedAt || 0);
+      const ownLocation = latestTarget && Number.isFinite(Number(latestTarget.lat)) && Number.isFinite(Number(latestTarget.lng)) ? {
+        lat: Number(latestTarget.lat),
+        lng: Number(latestTarget.lng),
+        accuracy: latestTarget.accuracy ?? null,
+        updatedAt: latest,
+      } : null;
+      emit({
+        shareTargetUids: targetUids,
+        sharing: targetUids.length > 0,
+        myLocation: ownLocation,
+        lastSharedAt: latest || null,
+      });
+    }, (error) => {
+      emit({ shareTargetUids: [], sharing: false, lastSharedAt: null });
+      window.toast?.(`分享對象讀取失敗：${firebaseMessage(error)}`);
     });
   }
 
@@ -2442,7 +2551,7 @@ if(!configured){
     currentUser = user;
     clearOnlineListeners();
     if(!user){
-      emit({ user: null, friendCode: '', friends: [], party: null, partyInvites: [], myLocation: null, sharing: false, status: 'signed-out' });
+      emit({ user: null, friendCode: '', friends: [], party: null, partyInvites: [], myLocation: null, sharing: false, shareTargetUids: [], status: 'signed-out' });
       return;
     }
     emit({
@@ -2456,6 +2565,7 @@ if(!configured){
       subscribeFriends(user.uid);
       subscribeParty(user.uid);
       subscribePartyInvites(user.uid);
+      subscribeShareTargets(user.uid);
     } catch (error) {
       emit({ user: userView(user), friendCode: codeFromUid(user.uid), friends: [], party: null, partyInvites: [], status: 'signed-in-db-error' });
       window.toast?.(`已登入，但資料庫尚未允許讀寫：${firebaseMessage(error)}`);
@@ -2540,38 +2650,80 @@ if(!configured){
         window.toast?.(`加入好友失敗：${firebaseMessage(error)}`);
       }
     },
-    async updateLocation(payload){
+    async updateLocation(payload, targetUids = []){
       if(!currentUser) return;
       try {
-        locationRef = ref(db, `locations/${currentUser.uid}`);
-        await set(locationRef, {
+        const friendIds = new Set((onlineState.friends || []).map((friend) => friend.uid).filter(Boolean));
+        const validTargets = [...new Set(Array.isArray(targetUids) ? targetUids : [])].filter((uid) => friendIds.has(uid));
+        if(!validTargets.length){
+          window.toast?.('請先勾選要分享位置的好友');
+          return;
+        }
+        const now = Date.now();
+        const displayName = onlineState.user?.displayName || currentUser.displayName || '玩家';
+        const locationPayload = {
           lat: Number(payload.lat),
           lng: Number(payload.lng),
           accuracy: payload.accuracy ?? null,
-          updatedAt: Date.now(),
+          updatedAt: now,
+          ownerUid: currentUser.uid,
+          ownerName: displayName,
+        };
+        const existingTargetsSnap = await get(ref(db, `locationShareTargets/${currentUser.uid}`));
+        const existingTargets = Object.keys(existingTargetsSnap.val() || {});
+        const targetSet = new Set(validTargets);
+        const updates = {
+          [`locations/${currentUser.uid}`]: null,
+        };
+        validTargets.forEach((targetUid) => {
+          updates[`locationShares/${targetUid}/${currentUser.uid}`] = { ...locationPayload, viewerUid: targetUid };
+          updates[`locationShareTargets/${currentUser.uid}/${targetUid}`] = {
+            uid: targetUid,
+            lat: locationPayload.lat,
+            lng: locationPayload.lng,
+            accuracy: locationPayload.accuracy,
+            updatedAt: now,
+          };
         });
-        onDisconnect(locationRef).remove();
+        existingTargets.filter((uid) => !targetSet.has(uid)).forEach((targetUid) => {
+          updates[`locationShares/${targetUid}/${currentUser.uid}`] = null;
+          updates[`locationShareTargets/${currentUser.uid}/${targetUid}`] = null;
+        });
+        await update(ref(db), updates);
+        validTargets.forEach((targetUid) => {
+          onDisconnect(ref(db, `locationShares/${targetUid}/${currentUser.uid}`)).remove();
+        });
         emit({
           sharing: true,
           myLocation: {
             lat: Number(payload.lat),
             lng: Number(payload.lng),
             accuracy: payload.accuracy ?? null,
-            updatedAt: Date.now(),
+            updatedAt: now,
           },
-          lastSharedAt: Date.now()
+          shareTargetUids: validTargets,
+          lastSharedAt: now
         });
-        window.toast?.('位置已同步給好友');
+        window.toast?.(`位置已分享給 ${validTargets.length} 位好友`);
       } catch (error) {
-        emit({ sharing: false, myLocation: null });
+        emit({ sharing: false, myLocation: null, shareTargetUids: [] });
         window.toast?.(`位置分享失敗：${firebaseMessage(error)}`);
       }
     },
     async stopSharing(){
       if(!currentUser) return;
       try {
-        if(locationRef) await remove(locationRef);
-        emit({ sharing: false, myLocation: null, lastSharedAt: null });
+        const existingTargetsSnap = await get(ref(db, `locationShareTargets/${currentUser.uid}`));
+        const existingTargets = Object.keys(existingTargetsSnap.val() || {});
+        const updates = {
+          [`locations/${currentUser.uid}`]: null,
+        };
+        existingTargets.forEach((targetUid) => {
+          updates[`locationShares/${targetUid}/${currentUser.uid}`] = null;
+          updates[`locationShareTargets/${currentUser.uid}/${targetUid}`] = null;
+        });
+        await update(ref(db), updates);
+        emit({ sharing: false, myLocation: null, shareTargetUids: [], lastSharedAt: null });
         window.toast?.('已停止分享位置');
       } catch (error) {
         window.toast?.(`停止分享失敗：${firebaseMessage(error)}`);

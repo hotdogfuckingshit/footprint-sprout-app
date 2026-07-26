@@ -16,9 +16,25 @@
       }
     },
     "locations": {
-      ".read": "auth != null",
       "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "locationShares": {
+      "$viewerUid": {
+        ".read": "auth != null && auth.uid === $viewerUid",
+        "$ownerUid": {
+          ".write": "auth != null && auth.uid === $ownerUid && (!newData.exists() || (root.child('friends').child($ownerUid).child($viewerUid).exists() && root.child('friends').child($viewerUid).child($ownerUid).exists()))"
+        }
+      }
+    },
+    "locationShareTargets": {
+      "$ownerUid": {
+        ".read": "auth != null && auth.uid === $ownerUid",
+        "$viewerUid": {
+          ".write": "auth != null && auth.uid === $ownerUid && (!newData.exists() || (root.child('friends').child($ownerUid).child($viewerUid).exists() && root.child('friends').child($viewerUid).child($ownerUid).exists()))"
+        }
       }
     },
     "parties": {

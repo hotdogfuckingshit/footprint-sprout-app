@@ -203,9 +203,11 @@ test('online tab switches to signed-in UI when auth snapshot arrives', async ({ 
   await page.locator('.navbtn[data-tab="online"]').click();
   await page.evaluate(() => {
     window.FootprintOnline = {
-      updateLocation(payload) {
+      updateLocation(payload, targetUids) {
+        window.locationShareTargets = targetUids;
         window.receiveOnlineSnapshot({
           sharing: true,
+          shareTargetUids: targetUids,
           myLocation: {
             lat: payload.lat,
             lng: payload.lng,
@@ -225,18 +227,25 @@ test('online tab switches to signed-in UI when auth snapshot arrives', async ({ 
         email: 'test@example.com',
       },
       friendCode: 'ABC12345',
-      friends: [],
+      friends: [
+        { uid: 'friend-a', displayName: 'Friend A' },
+        { uid: 'friend-b', displayName: 'Friend B' },
+      ],
       party: null,
       partyInvites: [],
       sharing: false,
+      shareTargetUids: [],
     });
   });
 
   await expect(page.locator('#authContent')).toContainText('測試玩家');
   await expect(page.locator('#authContent')).not.toContainText('使用 Google 登入');
   await expect(page.locator('#friendCodeBox')).toContainText('ABC12345');
+  await expect(page.locator('#shareTargetPicker input')).toHaveCount(2);
+  await page.locator('#shareTargetPicker input').nth(0).check();
 
   await page.locator('#shareLocationBtn').click();
+  await expect.poll(() => page.evaluate(() => window.locationShareTargets)).toEqual(['friend-a']);
   await expect(page.locator('#sharingText')).toContainText('分享中');
 });
 
@@ -377,6 +386,7 @@ test('friend distance only appears after both sides share locations', async ({ p
   await page.evaluate(() => {
     window.receiveOnlineSnapshot({
       sharing: true,
+      shareTargetUids: ['friend-1'],
       myLocation: {
         lat: 24.1815,
         lng: 120.6449,
