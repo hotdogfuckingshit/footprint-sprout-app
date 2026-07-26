@@ -2690,7 +2690,7 @@ if(!configured){
     { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signInAnonymously, signOut: firebaseSignOut, updateProfile },
     {
       getDatabase, ref, get, set, update, remove, onValue,
-      query, orderByChild, equalTo, onDisconnect,
+      query, orderByChild, equalTo,
     },
     messagingModule,
   ] = await Promise.all([
@@ -3122,9 +3122,6 @@ if(!configured){
           updates[`locationShareTargets/${currentUser.uid}/${targetUid}`] = null;
         });
         await update(ref(db), updates);
-        validTargets.forEach((targetUid) => {
-          onDisconnect(ref(db, `locationShares/${targetUid}/${currentUser.uid}`)).remove();
-        });
         emit({
           sharing: true,
           myLocation: {
