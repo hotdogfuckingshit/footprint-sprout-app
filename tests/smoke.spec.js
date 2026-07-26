@@ -102,6 +102,50 @@ test('nearby places falls back to client Google Places for GitHub Pages', async 
   expect(result.places[0].latitude).toBe(24.18);
 });
 
+test('blind quest planner starts hidden route and validates a city photo', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+
+  await expect(page.locator('#questCard')).toContainText('空堂盲盒探索');
+  await page.locator('#questTime').selectOption('40 分鐘');
+  await page.locator('#questTheme').selectOption('城市色彩');
+  await page.getByRole('button', { name: '開始盲盒路線' }).click();
+
+  await expect(page.locator('#questCard')).toContainText('盲盒路線進行中');
+  await expect(page.locator('#questCard')).toContainText('上傳任務照片驗證');
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
+      <rect width="120" height="120" fill="#1b7f5a"/>
+      <rect x="8" y="8" width="44" height="44" fill="#ffc93c"/>
+      <rect x="64" y="12" width="44" height="92" fill="#ff6b5b"/>
+      <path d="M0 110 L120 10" stroke="#1c2541" stroke-width="12"/>
+      <circle cx="36" cy="84" r="18" fill="#eaf6ff"/>
+    </svg>`;
+  await page.locator('#questPhotoInput').setInputFiles({
+    name: 'city-detail.svg',
+    mimeType: 'image/svg+xml',
+    buffer: Buffer.from(svg),
+  });
+
+  await expect(page.locator('#questCard')).toContainText('照片任務通過');
+  await expect(page.locator('#questCard')).toContainText('解鎖下一段線索');
+});
+
+test('blind quest can be completed and creates weekly review', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+
+  await page.getByRole('button', { name: '開始盲盒路線' }).click();
+  await page.getByRole('button', { name: '安全略過' }).click();
+  await page.getByRole('button', { name: '解鎖下一段線索' }).click();
+  await page.getByRole('button', { name: '安全略過' }).click();
+  await page.getByRole('button', { name: '完成並生成回顧' }).click();
+
+  await expect(page.locator('#questCard')).toContainText('本次旅程已完成');
+  await page.locator('.navbtn[data-tab="me"]').click();
+  await expect(page.locator('#reviewList')).toContainText('本週城市回顧');
+  await expect(page.locator('#reviewList')).toContainText('任務');
+});
+
 test('online tab renders safe offline state before Firebase is configured', async ({ page }) => {
   await page.goto('http://localhost:5173');
   await page.locator('.navbtn[data-tab="online"]').click();

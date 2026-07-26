@@ -103,6 +103,37 @@ body{
 .mini-note{font-size:11px; color:var(--ink-soft);}
 .nav-link-btn{display:block; width:100%; text-align:center; padding:12px; border-radius:14px; background:#fff; color:var(--leaf-dark); font-weight:800; font-size:13.5px; border:2px solid var(--leaf); margin-bottom:8px; text-decoration:none;}
 
+/* blind quest */
+.quest-card{margin:0 16px 12px; background:var(--paper); border-radius:22px; padding:14px; box-shadow:var(--shadow); border:2px solid rgba(255,255,255,.85);}
+.quest-head{display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:10px;}
+.quest-kicker{font-size:11px; color:var(--leaf-dark); font-weight:900; letter-spacing:.8px;}
+.quest-card h2{font-size:18px; line-height:1.25; margin:2px 0 4px; color:var(--ink);}
+.quest-card p{margin:0; font-size:12px; line-height:1.6; color:var(--ink-soft);}
+.quest-status{font-size:11px; font-weight:900; color:#fff; background:var(--leaf); border-radius:999px; padding:5px 9px; white-space:nowrap;}
+.quest-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0;}
+.quest-field{background:#F8FCFF; border:1px solid var(--line); border-radius:14px; padding:10px;}
+.quest-field label{display:block; font-size:10.5px; font-weight:900; color:var(--ink-soft); margin-bottom:5px;}
+.quest-field select{width:100%; border:0; background:transparent; color:var(--ink); font:inherit; font-size:13px; font-weight:900; outline:none;}
+.quest-route-secret{background:linear-gradient(135deg,#FFF7D8,#EAFBF3); border-radius:16px; padding:12px; margin:10px 0; border:1px solid #E8F1D1;}
+.quest-route-secret strong{display:block; font-size:14px; color:var(--ink); margin-bottom:4px;}
+.quest-progress{height:8px; background:var(--sky); border-radius:999px; overflow:hidden; margin:10px 0;}
+.quest-progress span{display:block; height:100%; background:linear-gradient(90deg,var(--leaf),var(--sun)); border-radius:999px;}
+.quest-task{background:#F8FCFF; border:1px solid var(--line); border-radius:16px; padding:12px; margin-top:10px;}
+.quest-task h3{margin:0 0 5px; font-size:14px; color:var(--ink);}
+.quest-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;}
+.quest-actions .btn{padding:12px 8px; font-size:13px;}
+.quest-actions .wide{grid-column:1 / -1;}
+.quest-photo-input{position:absolute; opacity:0; width:1px; height:1px; pointer-events:none;}
+.quest-checks{margin-top:10px; display:grid; gap:6px;}
+.quest-check{display:flex; gap:7px; align-items:flex-start; font-size:11.5px; line-height:1.45; color:var(--ink-soft); background:#fff; border-radius:12px; padding:8px;}
+.quest-check b{color:var(--ink);}
+.quest-check.pass span:first-child{color:var(--leaf-dark);}
+.quest-check.fail span:first-child{color:var(--coral);}
+.review-list{display:grid; gap:8px; margin:8px 16px 16px;}
+.review-card{background:var(--paper); border-radius:18px; padding:13px; box-shadow:var(--shadow);}
+.review-card strong{display:block; color:var(--ink); font-size:13.5px; margin-bottom:4px;}
+.review-card p{font-size:12px; color:var(--ink-soft); line-height:1.55; margin:0;}
+
 .filter-row{display:flex; gap:8px; padding:2px 16px 10px; overflow-x:auto;}
 .chip{flex-shrink:0; padding:7px 14px; border-radius:999px; background:var(--paper); font-size:12.5px; font-weight:700; color:var(--ink-soft); box-shadow:var(--shadow); border:2px solid transparent; cursor:pointer;}
 .chip.active{background:var(--leaf); color:#fff; border-color:var(--leaf-dark);}
@@ -353,6 +384,7 @@ body{
     <!-- ===== MAP SCREEN ===== -->
     <div class="screen active" id="screen-map">
       <div class="hero-line">看見別人的城市記憶，走到那裡，留下你自己的。<br>西屯區內 <b id="visitedCount">0</b>/<span id="totalCount">8</span> 個地點已到訪。</div>
+      <div class="quest-card" id="questCard"></div>
       <div class="map-wrap" id="mapWrap" ondblclick="handleMapDoubleClick(event)" ontouchend="handleMapTouch(event)">
         <div id="map" style="width:100%; height:210px; background:#DCEBF7; display:flex; align-items:center; justify-content:center; color:#5C6B8A; font-size:12px; text-align:center; padding:12px;">
           地圖載入中…如果一直顯示這行字，請確認 .env 已填 VITE_GOOGLE_MAPS_API_KEY
@@ -481,6 +513,8 @@ body{
         <div class="source-item"><div class="l">🧭 完成一條散步路線</div><div class="r">+10</div></div>
         <div class="source-item"><div class="l">💳 儲值取得</div><div class="r">依方案</div></div>
       </div>
+      <div class="section-title">週／月城市回顧</div>
+      <div class="review-list" id="reviewList"></div>
       <button class="btn btn-primary gen-btn" onclick="openGenerate()">✨ 用碎片生成新寵物（100）</button>
       <div class="principle"><b>可以花碎片生出寵物，但不能花錢買到牠的回憶。</b><br>成長靠真實步行，配件靠親自到訪。</div>
     </div>
@@ -567,8 +601,48 @@ let state = {
   level: 3,
   petColor: '#FF8A6B',
   visited: {},        // id -> {date}
-  equipped: []         // accessory ids currently worn
+  equipped: [],        // accessory ids currently worn
+  routeHistory: [],
+  ordinarySkipDate: ''
 };
+
+const QUEST_OPTIONS = {
+  times: ['40 分鐘', '1 小時', '2 小時', '1 天'],
+  themes: ['城市色彩', '老街痕跡', '自然縫隙', '建築細節', '咖啡散步', '跳脫舒適圈'],
+  paces: ['一般步行', '慢慢走', '避開階梯'],
+};
+const QUEST_TASKS = [
+  {
+    title: '找一個城市細節',
+    hint: '拍下招牌、牆面、磁磚、門把或路邊小物，照片中不要以人臉為主體。',
+    pass: '照片有足夠邊緣與紋理，像是城市材質或街景細節。',
+  },
+  {
+    title: '收集今天的顏色',
+    hint: '拍一張能代表這段路心情的顏色；亮色、陰影或雨後的灰都可以。',
+    pass: '照片有明顯色彩或明暗層次，不像純黑純白截圖。',
+  },
+  {
+    title: '確認公開可停留空間',
+    hint: '拍下公共空間、店外街景或可停留角落，不要拍住宅內部或陌生人特寫。',
+    pass: '照片有戶外/公共場景的光線與構圖線索，可作為終點足跡。',
+  },
+];
+let questState = {
+  active: false,
+  completed: false,
+  selectedTime: QUEST_OPTIONS.times[0],
+  selectedTheme: QUEST_OPTIONS.themes[0],
+  selectedPace: QUEST_OPTIONS.paces[0],
+  startedAt: null,
+  timeLimitMin: 40,
+  route: [],
+  taskIndex: 0,
+  phase: 'setup',
+  validation: null,
+  remainingText: '',
+};
+let questTimerId = null;
 
 function haversineSteps(lat1,lng1,lat2,lng2){
   const R=6371000;
@@ -582,6 +656,332 @@ function recomputeDistances(){
   LOCATIONS.forEach(l=>{ const d=haversineSteps(HERE.lat,HERE.lng,l.lat,l.lng); l.distM=d.meters; l.distSteps=d.steps; });
 }
 recomputeDistances();
+
+function minutesForQuest(label){
+  if(label === '1 小時') return 60;
+  if(label === '2 小時') return 120;
+  if(label === '1 天') return 360;
+  return 40;
+}
+
+function routeSizeForQuest(minutes){
+  if(minutes >= 120) return Math.min(4, LOCATIONS.length);
+  if(minutes >= 60) return Math.min(3, LOCATIONS.length);
+  return Math.min(2, LOCATIONS.length);
+}
+
+function formatQuestTime(ms){
+  const sec = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function questDirectionText(from, to){
+  const lat = to.lat - from.lat;
+  const lng = to.lng - from.lng;
+  const ns = lat > 0.00025 ? '北' : lat < -0.00025 ? '南' : '';
+  const ew = lng > 0.00025 ? '東' : lng < -0.00025 ? '西' : '';
+  return `${ns}${ew || ''}` || '附近';
+}
+
+function pickQuestRoute(){
+  const minutes = minutesForQuest(questState.selectedTime);
+  const count = routeSizeForQuest(minutes);
+  const lowerTheme = questState.selectedTheme;
+  const preferred = LOCATIONS.filter((location) => {
+    if(lowerTheme.includes('咖啡')) return ['cafe','dessert','book'].includes(location.type);
+    if(lowerTheme.includes('自然')) return ['park','scenic'].includes(location.type);
+    if(lowerTheme.includes('老街') || lowerTheme.includes('建築')) return ['book','night','park','scenic'].includes(location.type);
+    return true;
+  });
+  const source = (preferred.length >= count ? preferred : LOCATIONS)
+    .slice()
+    .sort((a,b) => a.distSteps - b.distSteps);
+  return source.slice(0, count);
+}
+
+function renderQuest(){
+  const card = document.getElementById('questCard');
+  if(!card) return;
+  if(!questState.active && !questState.completed){
+    card.innerHTML = `
+      <div class="quest-head">
+        <div>
+          <div class="quest-kicker">空堂盲盒探索</div>
+          <h2>不先告訴你終點，只給下一段線索</h2>
+          <p>依可用時間、主題與行動條件產生步行探索。照片任務通過後才解鎖下一段。</p>
+        </div>
+        <span class="quest-status">MVP</span>
+      </div>
+      <div class="quest-grid">
+        <div class="quest-field"><label>可用時間</label><select id="questTime">${QUEST_OPTIONS.times.map((v)=>`<option ${v===questState.selectedTime?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="quest-field"><label>行動條件</label><select id="questPace">${QUEST_OPTIONS.paces.map((v)=>`<option ${v===questState.selectedPace?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="quest-field" style="grid-column:1 / -1;"><label>探索主題</label><select id="questTheme">${QUEST_OPTIONS.themes.map((v)=>`<option ${v===questState.selectedTheme?'selected':''}>${v}</option>`).join('')}</select></div>
+      </div>
+      <button class="btn btn-primary" onclick="startBlindQuest()">開始盲盒路線</button>
+      <div class="privacy-note">安全規則：避開私人住宅、封閉空間與危險區域；若現場不適合，使用安全略過不扣任何資源。</div>
+    `;
+    return;
+  }
+
+  if(questState.completed){
+    const latest = state.routeHistory[0];
+    card.innerHTML = `
+      <div class="quest-head">
+        <div>
+          <div class="quest-kicker">本次旅程已完成</div>
+          <h2>${latest?.title || '城市微探索完成'}</h2>
+          <p>${latest?.summary || '照片、足跡與寵物成長已寫入你的私人回顧。'}</p>
+        </div>
+        <span class="quest-status">+10 💠</span>
+      </div>
+      <div class="quest-route-secret">
+        <strong>週/月回顧已更新</strong>
+        ${latest ? `任務 ${latest.tasks} 個・約 ${latest.steps.toLocaleString()} 步・${latest.time}` : '前往「我的」查看城市回顧。'}
+      </div>
+      <button class="btn btn-primary" onclick="resetQuest()">再開一條盲盒路線</button>
+    `;
+    return;
+  }
+
+  const activeLocation = questState.route[questState.taskIndex];
+  const previous = questState.taskIndex === 0 ? {lat:HERE.lat,lng:HERE.lng} : questState.route[questState.taskIndex - 1];
+  const task = QUEST_TASKS[questState.taskIndex % QUEST_TASKS.length];
+  const percent = Math.round(((questState.taskIndex) / questState.route.length) * 100);
+  const destinationText = questState.taskIndex === questState.route.length - 1 && questState.phase === 'checked'
+    ? `終點揭露：${activeLocation.name}`
+    : `下一段往 ${questDirectionText(previous, activeLocation)}，約 ${activeLocation.distSteps.toLocaleString()} 步內尋找線索`;
+  card.innerHTML = `
+    <div class="quest-head">
+      <div>
+        <div class="quest-kicker">盲盒路線進行中</div>
+        <h2>${destinationText}</h2>
+        <p>${questState.selectedTheme}・${questState.selectedPace}・倒數 <b class="num">${questState.remainingText || '--:--'}</b></p>
+      </div>
+      <span class="quest-status">${questState.taskIndex + 1}/${questState.route.length}</span>
+    </div>
+    <div class="quest-progress"><span style="width:${percent}%"></span></div>
+    <div class="quest-task">
+      <h3>${task.title}</h3>
+      <p>${task.hint}</p>
+      ${renderQuestValidation()}
+      <input class="quest-photo-input" id="questPhotoInput" type="file" accept="image/*" onchange="handleQuestPhoto(event)">
+      <div class="quest-actions">
+        ${questState.phase === 'checked'
+          ? `<button class="btn btn-primary wide" onclick="continueBlindQuest()">${questState.taskIndex === questState.route.length - 1 ? '完成並生成回顧' : '解鎖下一段線索'}</button>`
+          : `<button class="btn btn-primary wide" onclick="document.getElementById('questPhotoInput').click()">上傳任務照片驗證</button>`}
+        <button class="btn btn-ghost" onclick="focusQuestTarget()">聚焦本段地圖</button>
+        <button class="btn btn-ghost" onclick="useSafetyQuestSkip()">安全略過</button>
+        <button class="btn btn-ghost" onclick="useOrdinaryQuestSkip()">今日普通略過</button>
+        <button class="btn btn-ghost" onclick="abortQuest()">停止探索</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderQuestValidation(){
+  if(!questState.validation) return '<div class="privacy-note">照片會在瀏覽器端檢查清晰度、色彩/紋理與任務相符度，不會主動上傳。</div>';
+  return `<div class="privacy-note">${questState.validation.ok ? '照片任務通過，可以解鎖下一段線索。' : '照片尚未通過，請重拍或使用略過。'}</div><div class="quest-checks">${questState.validation.checks.map((check)=>`
+    <div class="quest-check ${check.passed?'pass':'fail'}"><span>${check.passed?'✓':'×'}</span><span><b>${check.label}</b><br>${check.detail}</span></div>
+  `).join('')}</div>`;
+}
+
+function startBlindQuest(){
+  questState.selectedTime = document.getElementById('questTime')?.value || questState.selectedTime;
+  questState.selectedTheme = document.getElementById('questTheme')?.value || questState.selectedTheme;
+  questState.selectedPace = document.getElementById('questPace')?.value || questState.selectedPace;
+  questState.timeLimitMin = minutesForQuest(questState.selectedTime);
+  questState.route = pickQuestRoute();
+  questState.active = true;
+  questState.completed = false;
+  questState.startedAt = Date.now();
+  questState.taskIndex = 0;
+  questState.phase = 'task';
+  questState.validation = null;
+  startQuestTimer();
+  renderQuest();
+  focusQuestTarget();
+  toast('盲盒路線已開始，終點暫時保密');
+}
+
+function startQuestTimer(){
+  clearInterval(questTimerId);
+  const tick = () => {
+    const elapsed = Date.now() - (questState.startedAt || Date.now());
+    questState.remainingText = formatQuestTime(questState.timeLimitMin * 60000 - elapsed);
+    const card = document.getElementById('questCard');
+    const clock = card?.querySelector('.num');
+    if(clock) clock.textContent = questState.remainingText;
+  };
+  tick();
+  questTimerId = setInterval(tick, 1000);
+}
+
+function focusQuestTarget(){
+  const target = questState.route[questState.taskIndex];
+  if(!target){ toast('目前沒有進行中的路線'); return; }
+  if(map) map.panTo({lat: target.lat, lng: target.lng});
+  toast(questState.phase === 'checked' ? `本段目的地：${target.name}` : '已聚焦本段線索附近');
+}
+
+function validateQuestPhotoFile(file){
+  return new Promise((resolve) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      const size = 72;
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d', {willReadFrequently:true});
+      ctx.drawImage(image, 0, 0, size, size);
+      const data = ctx.getImageData(0,0,size,size).data;
+      let total=0, squared=0, vivid=0, edges=0, edgePairs=0;
+      const lum = new Array(size*size);
+      for(let i=0,p=0;i<data.length;i+=4,p++){
+        const r=data[i], g=data[i+1], b=data[i+2];
+        const y=r*.299+g*.587+b*.114;
+        lum[p]=y; total+=y; squared+=y*y;
+        if(Math.max(r,g,b)-Math.min(r,g,b)>32) vivid++;
+      }
+      for(let y=1;y<size;y++){
+        for(let x=1;x<size;x++){
+          const p=y*size+x;
+          if(Math.abs(lum[p]-lum[p-1]) + Math.abs(lum[p]-lum[p-size]) > 42) edges++;
+          edgePairs++;
+        }
+      }
+      const mean=total/lum.length;
+      const variance=Math.max(0, squared/lum.length - mean*mean);
+      const checks = [
+        {label:'照片可讀性', passed:image.naturalWidth>=32 && image.naturalHeight>=32, detail:`解析度 ${image.naturalWidth}×${image.naturalHeight}`},
+        {label:'不是空白畫面', passed:variance>120, detail:`明暗變化 ${Math.round(variance)}`},
+        {label:'城市細節線索', passed:edges/edgePairs>.025 || vivid/lum.length>.08, detail:`紋理 ${(edges/edgePairs*100).toFixed(1)}%・色彩 ${(vivid/lum.length*100).toFixed(1)}%`},
+        {label:'任務語意啟發式', passed:variance>180 || vivid/lum.length>.1, detail:QUEST_TASKS[questState.taskIndex % QUEST_TASKS.length].pass},
+      ];
+      URL.revokeObjectURL(objectUrl);
+      resolve({ok:checks.every(c=>c.passed), checks});
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve({ok:false, checks:[{label:'照片可讀性', passed:false, detail:'無法讀取這張圖片，請重新選擇。'}]});
+    };
+    image.src = objectUrl;
+  });
+}
+
+async function handleQuestPhoto(event){
+  const file = event.target.files?.[0];
+  if(!file) return;
+  questState.validation = {ok:false, checks:[{label:'照片驗證', passed:true, detail:'正在檢查照片與任務要求…'}]};
+  renderQuest();
+  const result = await validateQuestPhotoFile(file);
+  questState.validation = result;
+  if(result.ok){
+    questState.phase = 'checked';
+    toast('照片任務通過，下一段線索已準備好');
+  } else {
+    toast('照片還不符合任務，請重拍或使用安全略過');
+  }
+  renderQuest();
+}
+
+function todayKey(){ return new Date().toISOString().slice(0,10); }
+
+function useOrdinaryQuestSkip(){
+  if(state.ordinarySkipDate === todayKey()){
+    toast('今日普通略過已使用，安全需求仍可免費略過');
+    return;
+  }
+  state.ordinarySkipDate = todayKey();
+  questState.validation = {ok:true, checks:[{label:'普通略過', passed:true, detail:'今日一次普通略過已使用。'}]};
+  questState.phase = 'checked';
+  renderQuest();
+}
+
+function useSafetyQuestSkip(){
+  questState.validation = {ok:true, checks:[{label:'安全略過', passed:true, detail:'現場不安全、不方便拍攝或無障礙需求時可不限次略過。'}]};
+  questState.phase = 'checked';
+  renderQuest();
+}
+
+function continueBlindQuest(){
+  if(questState.taskIndex < questState.route.length - 1){
+    questState.taskIndex++;
+    questState.phase = 'task';
+    questState.validation = null;
+    renderQuest();
+    focusQuestTarget();
+    return;
+  }
+  completeBlindQuest();
+}
+
+function completeBlindQuest(){
+  clearInterval(questTimerId);
+  const elapsedMin = Math.max(1, Math.round((Date.now() - questState.startedAt) / 60000));
+  const completedInTime = elapsedMin <= questState.timeLimitMin;
+  const gainedSteps = questState.route.reduce((sum, loc)=>sum + Math.min(1400, Math.max(260, loc.distSteps)), 0);
+  const reward = 10 + questState.route.length * 2 + (completedInTime ? 5 : 0);
+  state.fragments += reward;
+  state.steps += gainedSteps;
+  state.bond = Math.min(100, state.bond + 5);
+  state.level = Math.max(state.level, Math.floor(state.steps / 3000) + 1);
+  const finalLoc = questState.route.at(-1);
+  const entry = {
+    id: `route-${Date.now()}`,
+    title: `${questState.selectedTheme}・${finalLoc?.tag || '城市角落'}`,
+    summary: `你在不知道終點的情況下完成 ${questState.route.length} 段線索，最後抵達 ${finalLoc?.name || '未知角落'}。`,
+    time: questState.selectedTime,
+    pace: questState.selectedPace,
+    tasks: questState.route.length,
+    steps: gainedSteps,
+    reward,
+    createdAt: Date.now(),
+  };
+  state.routeHistory.unshift(entry);
+  state.routeHistory = state.routeHistory.slice(0, 8);
+  questState.active = false;
+  questState.completed = true;
+  renderTop();
+  renderQuest();
+  renderReviews();
+  toast(`旅程完成，獲得 ${reward} 記憶碎片`);
+}
+
+function abortQuest(){
+  clearInterval(questTimerId);
+  questState.active = false;
+  questState.completed = false;
+  questState.phase = 'setup';
+  questState.validation = null;
+  renderQuest();
+  toast('已停止探索，可隨時重新開始');
+}
+
+function resetQuest(){
+  questState.active = false;
+  questState.completed = false;
+  questState.phase = 'setup';
+  questState.validation = null;
+  renderQuest();
+}
+
+function renderReviews(){
+  const list = document.getElementById('reviewList');
+  if(!list) return;
+  if(!state.routeHistory.length){
+    list.innerHTML = `<div class="review-card"><strong>還沒有探索回顧</strong><p>完成盲盒路線後，照片任務、步數、終點與心情會整理在這裡。</p></div>`;
+    return;
+  }
+  const totalSteps = state.routeHistory.reduce((sum, item)=>sum + item.steps, 0);
+  list.innerHTML = `
+    <div class="review-card"><strong>本週城市回顧</strong><p>完成 ${state.routeHistory.length} 次探索，累積約 ${totalSteps.toLocaleString()} 步。最常選擇：${state.routeHistory[0].title}。</p></div>
+    ${state.routeHistory.slice(0,3).map((entry)=>`
+      <div class="review-card"><strong>${entry.title}</strong><p>${entry.summary}<br>任務 ${entry.tasks} 個・${entry.time}・+${entry.reward} 記憶碎片</p></div>
+    `).join('')}
+  `;
+}
 
 /* ================= ONLINE STATE ================= */
 let onlineState = {
@@ -1349,7 +1749,8 @@ function showTab(tab){
   if(tab==='pet') renderPet();
   if(tab==='book') renderBook();
   if(tab==='online') renderOnline();
-  if(tab==='me') renderProfile();
+  if(tab==='map') renderQuest();
+  if(tab==='me'){ renderProfile(); renderReviews(); }
 }
 
 /* ================= TOAST ================= */
@@ -1727,6 +2128,8 @@ renderList();
 renderTop();
 renderPet();
 renderOnline();
+renderQuest();
+renderReviews();
 loadGoogleMaps();
 </script>
 <script type="module">
