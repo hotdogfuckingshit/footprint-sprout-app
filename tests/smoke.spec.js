@@ -456,6 +456,7 @@ test('map double click enters fullscreen and does not exit while zooming', async
   await page.goto('http://localhost:5173');
   await page.locator('#mapWrap').dblclick();
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
+  await expect(page.locator('.map-recenter-btn')).toBeVisible();
   await page.locator('#mapWrap').dblclick();
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await page.locator('#mapWrap').click({ position: { x: 250, y: 250 } });
@@ -467,6 +468,48 @@ test('map double click enters fullscreen and does not exit while zooming', async
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await page.locator('.map-exit-btn').click();
   await expect(page.locator('#mapWrap')).not.toHaveClass(/map-fullscreen/);
+});
+
+test('fullscreen map recenter button returns to known user location', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(() => {
+    window.zoomCalls = [];
+    window.centerCalls = [];
+    map = {
+      setCenter(value) { window.centerCalls.push(value); },
+      setZoom(value) { window.zoomCalls.push(value); },
+    };
+    window.google = {
+      maps: {
+        SymbolPath: { CIRCLE: 'circle' },
+        Marker: class Marker {
+          constructor(options) { this.options = options; }
+          setMap() {}
+          addListener() {}
+        },
+        event: { trigger() {}, addListenerOnce(_map, _name, callback) { callback(); } },
+      },
+    };
+    window.receiveOnlineSnapshot({
+      configured: true,
+      user: { uid: 'me', displayName: 'Me' },
+      friends: [],
+      myLocation: { lat: 25.033, lng: 121.5654, updatedAt: Date.now() },
+    });
+    toggleMapFullscreen(true);
+    recenterFullscreenMap();
+    return {
+      lastCenter: window.centerCalls.at(-1),
+      lastZoom: window.zoomCalls.at(-1),
+      here: { lat: HERE.lat, lng: HERE.lng },
+      fullscreen: document.getElementById('mapWrap').classList.contains('map-fullscreen'),
+    };
+  });
+
+  expect(result.lastCenter).toEqual({ lat: 25.033, lng: 121.5654 });
+  expect(result.lastZoom).toBe(15);
+  expect(result.here).toEqual({ lat: 25.033, lng: 121.5654 });
+  expect(result.fullscreen).toBe(true);
 });
 
 test('distant friend locations are included in map bounds', async ({ page }) => {

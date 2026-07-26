@@ -104,6 +104,9 @@ body{
 .map-wrap.map-fullscreen .map-exit-btn{display:block;}
 .map-friends-btn{display:none; position:absolute; top:48px; left:8px; background:var(--paper); color:var(--leaf-dark); border:none; border-radius:999px; padding:7px 12px; font-size:11.5px; font-weight:900; box-shadow:var(--shadow); cursor:pointer; font-family:inherit; z-index:2;}
 .map-wrap.map-fullscreen .map-friends-btn{display:block;}
+.map-recenter-btn{display:none; position:absolute; top:8px; right:8px; background:var(--leaf); color:#fff; border:none; border-radius:999px; padding:7px 12px; font-size:11.5px; font-weight:900; box-shadow:var(--shadow); cursor:pointer; font-family:inherit; z-index:2;}
+.map-wrap.map-fullscreen .map-recenter-btn{display:block;}
+.map-wrap.map-fullscreen .locate-btn{display:none;}
 .map-badge{position:absolute; bottom:8px; left:8px; background:rgba(255,255,255,0.92); padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; color:var(--ink);}
 .locate-btn{position:absolute; top:8px; right:8px; background:var(--paper); border:none; border-radius:999px; padding:6px 12px; font-size:11.5px; font-weight:800; color:var(--leaf-dark); box-shadow:var(--shadow); cursor:pointer; font-family:inherit;}
 .mapline-actions{display:flex; align-items:center; gap:10px; padding:0 16px 8px;}
@@ -407,6 +410,7 @@ body{
         <div class="map-badge" id="mapBadge">📍 西屯區・預設位置</div>
         <button class="map-exit-btn" onclick="toggleMapFullscreen(false); event.stopPropagation();">退出全螢幕</button>
         <button class="map-friends-btn" onclick="fitFriendMapBounds(); event.stopPropagation();">查看好友</button>
+        <button class="map-recenter-btn" onclick="recenterFullscreenMap(); event.stopPropagation();">回到我</button>
         <button class="locate-btn" onclick="locateMe()" id="locateBtn">🎯 定位我</button>
       </div>
       <div class="map-exit-zone" id="mapExitZone" onclick="toggleMapFullscreen(false)" aria-label="退出全螢幕地圖"></div>
@@ -1478,6 +1482,23 @@ function focusOwnLocation(zoom = USER_LOCATION_ZOOM){
   renderMapMarkers();
 }
 
+function knownOwnLocation(){
+  return validLatLng(onlineState.myLocation) || {lat: HERE.lat, lng: HERE.lng};
+}
+
+function recenterFullscreenMap(){
+  if(!map){
+    toast('地圖尚未載入');
+    return;
+  }
+  const point = knownOwnLocation();
+  HERE.lat = point.lat;
+  HERE.lng = point.lng;
+  focusOwnLocation(USER_LOCATION_ZOOM);
+  document.getElementById('mapBadge').textContent = '📍 已回到你的定位';
+  toast('已回到你的定位');
+}
+
 function resizeMapSoon(nextFullscreen = document.getElementById('mapWrap')?.classList.contains('map-fullscreen')){
   setTimeout(() => {
     if(map && window.google?.maps){
@@ -1519,7 +1540,7 @@ function handleMapDoubleClick(event){
 
 function isMapControlTarget(event){
   const target = event.target;
-  return Boolean(target?.closest?.('button,a,[role="button"],.gmnoprint,.gm-control-active,.gm-style-cc,.map-exit-btn,.map-friends-btn,.locate-btn'));
+  return Boolean(target?.closest?.('button,a,[role="button"],.gmnoprint,.gm-control-active,.gm-style-cc,.map-exit-btn,.map-friends-btn,.map-recenter-btn,.locate-btn'));
 }
 
 function handleMapTouchStart(event){
