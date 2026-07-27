@@ -508,19 +508,9 @@ test('blind quest planner starts hidden route and validates a city photo', async
   await expect(page.locator('#questCard')).toContainText('空堂盲盒探索');
   await expect(page.locator('#questPace')).toHaveCount(0);
   await expect(page.locator('#questMinutes')).toHaveValue('40');
-  const minuteOptions = await page.locator('#questMinutes option').evaluateAll((options) => options.map((option) => option.value));
-  expect(minuteOptions[0]).toBe('0');
-  expect(minuteOptions.at(-1)).toBe('120');
-  expect(minuteOptions).toContain('55');
-  await page.evaluate(() => {
-    window.vibrationCalls = [];
-    navigator.vibrate = (pattern) => {
-      window.vibrationCalls.push(pattern);
-      return true;
-    };
-  });
-  await page.locator('#questMinutes').selectOption('55');
-  await expect.poll(() => page.evaluate(() => window.vibrationCalls)).toEqual([8]);
+  await expect(page.locator('#questMinutes')).toHaveAttribute('min', '0');
+  await expect(page.locator('#questMinutes')).toHaveAttribute('max', '120');
+  await page.locator('#questMinutes').fill('55');
   await page.locator('#questTheme').selectOption('城市色彩');
   await page.getByRole('button', { name: '開始盲盒路線' }).click();
 

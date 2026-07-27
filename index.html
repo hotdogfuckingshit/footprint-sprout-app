@@ -147,7 +147,6 @@ body{
 .quest-field label{display:block; font-size:10.5px; font-weight:900; color:var(--ink-soft); margin-bottom:5px;}
 .quest-field select,.quest-field input{width:100%; border:0; background:transparent; color:var(--ink); font:inherit; font-size:13px; font-weight:900; outline:none;}
 .quest-fixed-value{font-size:13px; font-weight:900; color:var(--ink); line-height:1.4;}
-.quest-time-select{appearance:auto; min-height:34px;}
 .quest-route-secret{background:linear-gradient(135deg,#FFF7D8,#EAFBF3); border-radius:16px; padding:12px; margin:10px 0; border:1px solid #E8F1D1;}
 .quest-route-secret strong{display:block; font-size:14px; color:var(--ink); margin-bottom:4px;}
 .quest-progress{height:8px; background:var(--sky); border-radius:999px; overflow:hidden; margin:10px 0;}
@@ -1317,7 +1316,6 @@ let questState = {
   remainingText: '',
 };
 let questTimerId = null;
-let lastQuestTimeHapticAt = 0;
 
 function haversineSteps(lat1,lng1,lat2,lng2){
   const R=6371000;
@@ -1359,25 +1357,6 @@ function minutesForQuest(label){
   if(label === '2 小時') return 120;
   if(label === '1 天') return 120;
   return 40;
-}
-
-function questMinuteOptionsHtml(){
-  const selected = clampQuestMinutes(questState.customMinutes);
-  const options = [];
-  for(let minutes = 0; minutes <= 120; minutes += 5){
-    const label = minutes === 0 ? '0 分鐘' : `${minutes} 分鐘`;
-    options.push(`<option value="${minutes}" ${minutes === selected ? 'selected' : ''}>${label}</option>`);
-  }
-  return options.join('');
-}
-
-function questTimeHaptic(){
-  try {
-    const now = Date.now();
-    if(now - lastQuestTimeHapticAt < 80) return;
-    lastQuestTimeHapticAt = now;
-    if(typeof navigator.vibrate === 'function') navigator.vibrate(8);
-  } catch {}
 }
 
 function routeSizeForQuest(minutes){
@@ -1529,7 +1508,7 @@ function renderQuest(){
         <span class="quest-status">MVP</span>
       </div>
       <div class="quest-grid">
-        <div class="quest-field"><label>可用時間（分鐘）</label><select id="questMinutes" class="quest-time-select" onchange="questTimeHaptic()" oninput="questTimeHaptic()">${questMinuteOptionsHtml()}</select></div>
+        <div class="quest-field"><label>可用時間（分鐘）</label><input id="questMinutes" type="number" inputmode="numeric" min="0" max="120" step="5" value="${clampQuestMinutes(questState.customMinutes)}"></div>
         <div class="quest-field"><label>行動條件</label><div class="quest-fixed-value">一般步行</div></div>
         <div class="quest-field" style="grid-column:1 / -1;"><label>探索主題</label><select id="questTheme">${QUEST_OPTIONS.themes.map((v)=>`<option ${v===questState.selectedTheme?'selected':''}>${v}</option>`).join('')}</select></div>
       </div>
