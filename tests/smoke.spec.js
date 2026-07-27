@@ -1242,14 +1242,16 @@ test('walk party creation sends invites only to checked friends and does not ove
 test('map double click enters fullscreen and does not exit while zooming', async ({ page }) => {
   await page.goto('http://localhost:5173');
   await expect(page.locator('.map-expand-btn')).toBeVisible();
+  await expect(page.locator('.locate-btn')).toBeVisible();
+  await expect(page.locator('.locate-btn')).toContainText('定位我');
   await page.locator('.map-expand-btn').click();
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
+  await expect(page.locator('.locate-btn')).toContainText('回到我');
   const fullscreenMetrics = await page.evaluate(() => {
     const wrap = document.getElementById('mapWrap').getBoundingClientRect();
     const exitZone = document.getElementById('mapExitZone').getBoundingClientRect();
     const exitStyle = getComputedStyle(document.querySelector('.map-exit-btn'));
     const friendsStyle = getComputedStyle(document.querySelector('.map-friends-btn'));
-    const recenterStyle = getComputedStyle(document.querySelector('.map-recenter-btn'));
     const locateStyle = getComputedStyle(document.querySelector('.locate-btn'));
     return {
       heightRatio: wrap.height / window.innerHeight,
@@ -1257,11 +1259,9 @@ test('map double click enters fullscreen and does not exit while zooming', async
       mapBottom: wrap.bottom,
       exitPosition: exitStyle.position,
       friendsPosition: friendsStyle.position,
-      recenterPosition: recenterStyle.position,
       locatePosition: locateStyle.position,
       exitZ: Number(exitStyle.zIndex),
       friendsZ: Number(friendsStyle.zIndex),
-      recenterZ: Number(recenterStyle.zIndex),
       locateZ: Number(locateStyle.zIndex),
       googleFullscreenVisible: [...document.querySelectorAll('.gm-fullscreen-control')].some((el) => getComputedStyle(el).display !== 'none'),
       googleCameraVisible: [...document.querySelectorAll('#map button[title="Map camera controls"], #map button[aria-label="Map camera controls"]')].some((el) => getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0),
@@ -1271,29 +1271,36 @@ test('map double click enters fullscreen and does not exit while zooming', async
   expect(fullscreenMetrics.exitZoneTop).toBeGreaterThanOrEqual(fullscreenMetrics.mapBottom - 2);
   expect(fullscreenMetrics.exitPosition).toBe('absolute');
   expect(fullscreenMetrics.friendsPosition).toBe('absolute');
-  expect(fullscreenMetrics.recenterPosition).toBe('absolute');
   expect(fullscreenMetrics.locatePosition).toBe('absolute');
   expect(fullscreenMetrics.exitZ).toBeGreaterThanOrEqual(260);
   expect(fullscreenMetrics.friendsZ).toBeGreaterThanOrEqual(260);
-  expect(fullscreenMetrics.recenterZ).toBeGreaterThanOrEqual(260);
   expect(fullscreenMetrics.locateZ).toBeGreaterThanOrEqual(260);
   expect(fullscreenMetrics.googleFullscreenVisible).toBe(false);
   expect(fullscreenMetrics.googleCameraVisible).toBe(false);
   await expect(page.locator('.map-exit-btn')).toBeVisible();
   await expect(page.locator('.map-friends-btn')).toBeVisible();
-  await expect(page.locator('.map-recenter-btn')).toBeVisible();
   await expect(page.locator('.locate-btn')).toBeVisible();
   await page.evaluate(() => document.getElementById('mapWrap').dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await page.locator('#mapWrap').click({ position: { x: 250, y: 250 } });
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await expect(page.locator('#mapExitZone')).toHaveClass(/active/);
+  await page.evaluate(() => {
+    const mapEl = document.getElementById('map');
+    mapEl.style.height = '100%';
+    mapEl.style.minHeight = '100%';
+  });
   await page.locator('#mapExitZone').click();
   await expect(page.locator('#mapWrap')).not.toHaveClass(/map-fullscreen/);
+  await expect(page.locator('.locate-btn')).toContainText('定位我');
+  await expect(page.locator('#map')).toHaveCSS('height', '210px');
   await page.evaluate(() => document.getElementById('mapWrap').dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
+  await expect(page.locator('.locate-btn')).toContainText('回到我');
   await page.locator('.map-exit-btn').click();
   await expect(page.locator('#mapWrap')).not.toHaveClass(/map-fullscreen/);
+  await expect(page.locator('.locate-btn')).toContainText('定位我');
+  await expect(page.locator('#map')).toHaveCSS('height', '210px');
 });
 
 test('fullscreen map controls remain visible on second entry after scrolling', async ({ page }) => {
@@ -1311,12 +1318,12 @@ test('fullscreen map controls remain visible on second entry after scrolling', a
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await expect(page.locator('.map-exit-btn')).toBeVisible();
   await expect(page.locator('.map-friends-btn')).toBeVisible();
-  await expect(page.locator('.map-recenter-btn')).toBeVisible();
   await expect(page.locator('.locate-btn')).toBeVisible();
+  await expect(page.locator('.locate-btn')).toContainText('回到我');
   await expect.poll(() => page.evaluate(() => document.getElementById('screen-map').scrollTop)).toBe(0);
 });
 
-test('fullscreen map recenter button returns to known user location', async ({ page }) => {
+test('fullscreen map locate button returns to known user location', async ({ page }) => {
   await page.goto('http://localhost:5173');
   const result = await page.evaluate(() => {
     window.zoomCalls = [];
@@ -1343,12 +1350,13 @@ test('fullscreen map recenter button returns to known user location', async ({ p
       myLocation: { lat: 25.033, lng: 121.5654, updatedAt: Date.now() },
     });
     toggleMapFullscreen(true);
-    recenterFullscreenMap();
+    mapLocateAction();
     return {
       lastCenter: window.centerCalls.at(-1),
       lastZoom: window.zoomCalls.at(-1),
       here: { lat: HERE.lat, lng: HERE.lng },
       fullscreen: document.getElementById('mapWrap').classList.contains('map-fullscreen'),
+      buttonText: document.getElementById('locateBtn').textContent,
     };
   });
 
@@ -1356,6 +1364,7 @@ test('fullscreen map recenter button returns to known user location', async ({ p
   expect(result.lastZoom).toBe(15);
   expect(result.here).toEqual({ lat: 25.033, lng: 121.5654 });
   expect(result.fullscreen).toBe(true);
+  expect(result.buttonText).toContain('回到我');
 });
 
 test('distant friend locations are included in map bounds', async ({ page }) => {
