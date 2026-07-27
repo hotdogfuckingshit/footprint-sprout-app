@@ -379,6 +379,79 @@ test('client places search uses a 500 meter radius and filters distant results',
   expect(result.names.every((name) => name.startsWith('Near'))).toBe(true);
 });
 
+test('all category limits map markers to 12 and focuses a selected list place on demand', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const initial = await page.evaluate(() => {
+    window.createdMarkers = [];
+    window.centerCalls = [];
+    window.zoomCalls = [];
+    map = {
+      setCenter(value) { window.centerCalls.push(value); },
+      setZoom(value) { window.zoomCalls.push(value); },
+    };
+    window.google = {
+      maps: {
+        SymbolPath: { CIRCLE: 'circle' },
+        Marker: class Marker {
+          constructor(options) {
+            this.options = options;
+            window.createdMarkers.push(options.title);
+          }
+          setMap() {}
+          addListener() {}
+        },
+      },
+    };
+    const locations = Array.from({ length: 20 }, (_, index) => ({
+      id: `place-${index}`,
+      name: `Place ${index}`,
+      type: index % 2 ? 'food' : 'cafe',
+      tag: index % 2 ? '美食' : '咖啡廳',
+      color: '#FFF1D0',
+      lat: 24.18 + index * 0.0001,
+      lng: 120.64 + index * 0.0001,
+      distM: 20 + index,
+      distSteps: 30 + index,
+      placeId: `pid-${index}`,
+      desc: `Place ${index} desc`,
+      taskable: true,
+    }));
+    LOCATIONS.splice(0, LOCATIONS.length, ...locations);
+    currentFilter = 'all';
+    focusedMapLocationId = null;
+    renderList();
+    renderMapMarkers();
+    return {
+      markerCount: mapMarkers.length,
+      markerTitles: window.createdMarkers.slice(),
+      totalText: document.getElementById('totalCount').textContent,
+    };
+  });
+
+  expect(initial.markerCount).toBe(12);
+  expect(initial.markerTitles).toEqual(Array.from({ length: 12 }, (_, index) => `Place ${index}`));
+  expect(initial.totalText).toBe('20');
+
+  await page.locator('#locList .loc-card').nth(19).click();
+  await expect(page.getByRole('button', { name: '在地圖上查看這個地點' })).toBeVisible();
+  await page.getByRole('button', { name: '在地圖上查看這個地點' }).click();
+  const focused = await page.evaluate(() => ({
+    markerCount: mapMarkers.length,
+    focusedMapLocationId,
+    markerTitles: window.createdMarkers.slice(-13),
+    lastCenter: window.centerCalls.at(-1),
+    lastZoom: window.zoomCalls.at(-1),
+    badge: document.getElementById('mapBadge').textContent,
+  }));
+
+  expect(focused.markerCount).toBe(13);
+  expect(focused.focusedMapLocationId).toBe('place-19');
+  expect(focused.markerTitles).toContain('Place 19');
+  expect(focused.lastCenter).toEqual({ lat: 24.1819, lng: 120.6419 });
+  expect(focused.lastZoom).toBe(16);
+  expect(focused.badge).toContain('Place 19');
+});
+
 test('check-in cannot be completed without verified location proof', async ({ page }) => {
   await page.goto('http://localhost:5173');
   const result = await page.evaluate(() => {

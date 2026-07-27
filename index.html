@@ -2527,8 +2527,10 @@ function focusFriendOnMap(uid){
 const DEFAULT_MAP_ZOOM = 14;
 const USER_LOCATION_ZOOM = 15;
 const NEARBY_RADIUS_M = 500;
+const ALL_MAP_MARKER_LIMIT = 12;
 let map, userMarker, friendInfoWindow, mapMarkers = [], friendMarkers = [];
 let mapLoadTimer = null;
+let focusedMapLocationId = null;
 let lastMapTouchAt = 0;
 let lastMapTouchEventAt = 0;
 let pendingMapExitTimer = null;
@@ -2736,7 +2738,8 @@ function loadGoogleMaps(retry = false){
 function renderMapMarkers(){
   if(!map) return; // 金鑰還沒生效時 map 是 undefined，先不動作
   mapMarkers.forEach(m=>m.setMap(null));
-  mapMarkers = LOCATIONS.map(l=>{
+  const locations = mapLocationsForMarkers();
+  mapMarkers = locations.map(l=>{
     const visited = !!state.visited[l.id];
     const marker = new google.maps.Marker({
       position:{lat:l.lat, lng:l.lng},
@@ -2756,6 +2759,37 @@ function renderMapMarkers(){
     return marker;
   });
   renderFriendMarkers();
+}
+
+function mapLocationsForMarkers(){
+  const sorted = LOCATIONS
+    .filter((location) => matchesFilterType(location.type, currentFilter) && Number(location.distM) <= NEARBY_RADIUS_M)
+    .slice()
+    .sort((a, b) => a.distM - b.distM);
+  const limited = currentFilter === 'all' ? sorted.slice(0, ALL_MAP_MARKER_LIMIT) : sorted;
+  if(focusedMapLocationId && !limited.some((location) => location.id === focusedMapLocationId)){
+    const focused = LOCATIONS.find((location) => location.id === focusedMapLocationId);
+    if(focused) limited.push(focused);
+  }
+  return limited;
+}
+
+function focusLocationOnMap(id){
+  const location = LOCATIONS.find((item) => item.id === id);
+  if(!location){ toast('找不到這個地點'); return; }
+  focusedMapLocationId = id;
+  closeSheet();
+  showTab('map');
+  if(!map){
+    loadGoogleMaps();
+    toast('地圖還在載入，載入後會定位到這個地點');
+    return;
+  }
+  renderMapMarkers();
+  map.setCenter({lat: location.lat, lng: location.lng});
+  if(typeof map.setZoom === 'function') map.setZoom(16);
+  document.getElementById('mapBadge').textContent = `📍 ${location.name}`;
+  toast(`已在地圖標示：${location.name}`);
 }
 
 // 「你在這裡」的圖釘
@@ -2812,7 +2846,9 @@ async function fetchNearbyRealPlaces(filter = currentFilter, options = {}){
     if(!options.preserveScroll) focusOwnLocation(DEFAULT_MAP_ZOOM);
     if(options.preserveScroll) restoreMapScroll(savedScrollTop);
     document.getElementById('mapBadge').textContent = `📍 ${data.provider === 'google' ? 'Google Places' : 'OpenStreetMap'}・真實地點`;
-    document.getElementById('locateNote').textContent = `已載入 ${places.length} 個附近真實地點，點卡片可看店名與導航`;
+    document.getElementById('locateNote').textContent = currentFilter === 'all'
+      ? `已載入方圓 ${NEARBY_RADIUS_M} 公尺內 ${places.length} 個真實地點；為了手機順暢，地圖只顯示最近 ${ALL_MAP_MARKER_LIMIT} 個`
+      : `已載入 ${places.length} 個附近真實地點，點卡片可看店名與導航`;
     toast(`已同步 ${places.length} 個真實地點`);
   } catch (error) {
     if(error?.message === 'Google Maps Places library is not ready'){
@@ -3384,6 +3420,7 @@ function cityForLocation(location){
 function setFilter(k){
   const savedScrollTop = desiredMapListScrollTop();
   currentFilter=k;
+  focusedMapLocationId = null;
   renderFilters();
   renderList();
   restoreMapScroll(savedScrollTop);
@@ -3422,6 +3459,9 @@ function openSheet(id){
   activeLocId=id;
   const l = LOCATIONS.find(x=>x.id===id);
   const visited = !!state.visited[id];
+  const mapFocusAction = currentFilter === 'all'
+    ? `<button class="btn btn-ghost" onclick="focusLocationOnMap('${id}')">在地圖上查看這個地點</button>`
+    : '';
   document.getElementById('sheetContent').innerHTML = `
     <div class="sheet-hero" style="background:linear-gradient(135deg, ${l.color}, #B7C9E0);">
       <span class="tag">${l.tag}${visited?' · 已到訪':''}</span>
@@ -3442,6 +3482,7 @@ function openSheet(id){
         </div>
       </div>
       <a class="nav-link-btn" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=${l.lat},${l.lng}&destination_place_id=${l.placeId}&travelmode=walking">🧭 在 Google Maps 導航前往（真實路線）</a>
+      ${mapFocusAction}
       ${visited
         ? `<button class="btn btn-ghost" onclick="closeSheet()">關閉</button>`
         : `<button class="btn btn-primary" onclick="startCheckin('${id}')">開始到訪認證</button>
