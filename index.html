@@ -62,10 +62,12 @@ body{
   background:linear-gradient(180deg,var(--sky-deep), var(--sky) 90%);
   flex-shrink:0;
 }
-.brand{display:flex; align-items:center; gap:8px;}
+.brand{display:flex; align-items:center; gap:8px; min-width:0;}
 .brand .mark{width:30px;height:30px;border-radius:9px;background:var(--leaf); display:flex;align-items:center;justify-content:center; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.15);}
 .brand .mark svg{width:18px;height:18px;}
-.brand h1{font-size:16px; margin:0; font-weight:900; color:var(--ink); letter-spacing:0.5px;}
+.brand-title{display:flex; flex-direction:column; line-height:1.08; min-width:0;}
+.brand h1{font-size:15px; margin:0; font-weight:900; color:var(--ink); letter-spacing:0; max-width:122px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.brand-level{font-size:10px; font-weight:900; color:var(--leaf-dark);}
 .stats{display:flex; gap:8px;}
 .pill{
   display:flex; align-items:center; gap:5px; background:var(--paper); border-radius:999px;
@@ -116,6 +118,11 @@ body{
 .map-recenter-btn{display:none; position:absolute; top:8px; right:8px; background:var(--leaf); color:#fff; border:none; border-radius:999px; padding:7px 12px; font-size:11.5px; font-weight:900; box-shadow:var(--shadow); cursor:pointer; font-family:inherit; z-index:2;}
 .map-wrap.map-fullscreen .map-recenter-btn{display:block; top:12px; right:12px; z-index:262;}
 .map-wrap.map-fullscreen .locate-btn{display:block; top:52px; right:12px; z-index:262; background:var(--paper); color:var(--leaf-dark);}
+.map-friend-picker{display:none; position:absolute; top:92px; left:12px; right:12px; max-height:42%; overflow:auto; z-index:263; background:rgba(255,255,255,.96); border-radius:18px; padding:8px; box-shadow:var(--shadow);}
+.map-wrap.map-fullscreen .map-friend-picker.open{display:block;}
+.map-friend-option{display:flex; align-items:center; gap:9px; width:100%; border:0; background:#F8FCFF; border-radius:14px; padding:8px; margin:5px 0; font-family:inherit; text-align:left; color:var(--ink);}
+.map-friend-option b{font-size:12.5px;}
+.map-friend-option span{display:block; font-size:10.5px; color:var(--ink-soft); margin-top:1px;}
 .map-expand-btn{position:absolute; top:8px; left:8px; background:var(--ink); color:#fff; border:none; border-radius:999px; padding:6px 12px; font-size:11.5px; font-weight:900; box-shadow:var(--shadow); cursor:pointer; font-family:inherit; z-index:5;}
 .map-wrap.map-fullscreen .map-expand-btn{display:none;}
 .map-badge{position:absolute; bottom:8px; left:8px; background:rgba(255,255,255,0.92); padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; color:var(--ink);}
@@ -237,6 +244,31 @@ body{
 .lvl-badge{background:var(--coral); color:#fff; font-size:11px; font-weight:800; padding:3px 10px; border-radius:999px;}
 .pet-sub{font-size:12px; color:var(--ink-soft); margin-bottom:14px;}
 .pet-svg-holder{position:relative; height:150px; display:flex; align-items:center; justify-content:center;}
+.pet-svg-holder.pet3d-ready{height:188px; perspective:760px; touch-action:none;}
+.pet3d-model{position:relative; width:156px; height:156px; transform-style:preserve-3d; transform:rotateX(-10deg) rotateY(var(--pet-rot-y, -24deg)); transition:transform .08s linear; filter:drop-shadow(0 18px 16px rgba(28,37,65,.18));}
+.pet3d-shadow{position:absolute; left:31px; right:31px; bottom:8px; height:16px; border-radius:50%; background:rgba(28,37,65,.12); transform:rotateX(72deg) translateZ(-34px);}
+.pet3d-body,.pet3d-head,.pet3d-belly,.pet3d-eye,.pet3d-mouth,.pet3d-part{position:absolute; transform-style:preserve-3d;}
+.pet3d-body{left:42px; top:50px; width:72px; height:84px; border-radius:44% 44% 38% 38%; background:radial-gradient(circle at 30% 22%, #fff8, transparent 32%), var(--body); box-shadow:inset -16px -18px 28px rgba(0,0,0,.12);}
+.pet3d-head{left:40px; top:16px; width:76px; height:64px; border-radius:45% 45% 42% 42%; background:radial-gradient(circle at 32% 24%, #fff9, transparent 34%), var(--head); box-shadow:inset -13px -15px 22px rgba(0,0,0,.1); transform:translateZ(18px);}
+.pet3d-belly{left:17px; top:42px; width:38px; height:28px; border-radius:50%; background:var(--belly); opacity:.82; transform:translateZ(20px);}
+.pet3d-eye{top:23px; width:8px; height:10px; border-radius:50%; background:#1C2541; transform:translateZ(25px);}
+.pet3d-eye.left{left:22px}.pet3d-eye.right{right:22px}
+.pet3d-mouth{left:32px; top:39px; width:14px; height:7px; border-bottom:3px solid #1C2541; border-radius:0 0 14px 14px; transform:translateZ(26px);}
+.pet3d-part{background:var(--accent); box-shadow:inset -8px -8px 14px rgba(0,0,0,.1);}
+.pet3d-ear{width:24px; height:36px; top:-14px; border-radius:70% 70% 38% 38%; transform-origin:bottom center;}
+.pet3d-ear.left{left:12px; transform:rotateZ(-24deg) translateZ(6px)}
+.pet3d-ear.right{right:12px; transform:rotateZ(24deg) translateZ(6px)}
+.pet3d-tail{width:46px; height:14px; right:-24px; top:72px; border-radius:999px; transform:rotateZ(-18deg) translateZ(-12px)}
+.pet3d-wing{width:40px; height:54px; top:56px; border-radius:80% 24% 80% 24%; opacity:.86; transform:translateZ(-8px)}
+.pet3d-wing.left{left:8px; transform:rotateZ(-16deg) translateZ(-8px)}
+.pet3d-wing.right{right:8px; transform:rotateZ(16deg) scaleX(-1) translateZ(-8px)}
+.pet3d-fin{width:44px; height:24px; top:76px; border-radius:70% 30% 70% 30%; opacity:.88;}
+.pet3d-fin.left{left:4px; transform:rotateZ(12deg) translateZ(2px)}
+.pet3d-fin.right{right:4px; transform:scaleX(-1) rotateZ(12deg) translateZ(2px)}
+.pet3d-sprout{left:65px; top:-14px; width:28px; height:34px; background:transparent; box-shadow:none; transform:translateZ(22px);}
+.pet3d-sprout:before{content:''; position:absolute; left:12px; top:15px; width:4px; height:22px; border-radius:999px; background:#249A60;}
+.pet3d-sprout:after{content:''; position:absolute; left:2px; top:0; width:24px; height:16px; border-radius:70% 30% 70% 30%; background:var(--accent); transform:rotate(-20deg);}
+.pet-species-note{font-size:11px; color:var(--ink-soft); margin-top:6px; font-weight:800;}
 
 .bar-block{margin:14px 18px;}
 .bar-label{display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:5px;}
@@ -289,7 +321,6 @@ body{
 .source-item:last-child{border-bottom:none;}
 .source-item .l{color:var(--ink); font-weight:700; display:flex; gap:8px; align-items:center;}
 .source-item .r{color:var(--leaf-dark); font-weight:800;}
-.gen-btn{margin:16px; }
 .principle{margin:6px 16px 20px; text-align:center; font-size:12px; color:var(--ink-soft); line-height:1.7; padding:0 10px;}
 .principle b{color:var(--ink);}
 
@@ -314,6 +345,7 @@ body{
 .friend-distance{font-size:12px; color:var(--leaf-dark); font-weight:900;}
 .party-picker{margin-top:10px; border-top:1px solid var(--line); padding-top:10px;}
 .party-picker-title{font-size:12px; font-weight:900; color:var(--ink-soft); margin-bottom:6px;}
+.party-picker-note{font-size:11px; color:var(--ink-soft); line-height:1.45; margin-bottom:6px;}
 .party-choice{display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--line);}
 .party-choice:first-of-type{border-top:0;}
 .party-choice input{width:20px; height:20px; accent-color:var(--leaf); flex-shrink:0;}
@@ -406,10 +438,10 @@ body{
   <div class="notch"></div>
 
   <div class="topbar">
-    <div class="brand">
-      <div class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2C8 6 5 9.5 5 13a7 7 0 0014 0c0-3.5-3-7-7-11z" fill="#fff"/></svg></div>
-      <h1>足跡</h1>
-    </div>
+	    <div class="brand">
+	      <div class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2C8 6 5 9.5 5 13a7 7 0 0014 0c0-3.5-3-7-7-11z" fill="#fff"/></svg></div>
+	      <div class="brand-title"><h1 id="brandName">玩家</h1><span class="brand-level num" id="brandLevel">Lv.1</span></div>
+	    </div>
     <div class="stats">
       <div class="pill frag"><span class="ico">💠</span><span class="num" id="topFrag">42</span></div>
       <div class="pill step"><span class="ico">👣</span><span class="num" id="topStep">0</span></div>
@@ -420,7 +452,7 @@ body{
 
     <!-- ===== MAP SCREEN ===== -->
     <div class="screen active" id="screen-map">
-      <div class="hero-line">看見別人的城市記憶，走到那裡，留下你自己的。<br>西屯區內 <b id="visitedCount">0</b>/<span id="totalCount">8</span> 個地點已到訪。</div>
+	      <div class="hero-line">看見別人的城市記憶，走到那裡，留下你自己的。<br>目前附近 <b id="visitedCount">0</b>/<span id="totalCount">8</span> 個地點已到訪。</div>
       <div class="quest-card" id="questCard"></div>
       <div class="map-wrap" id="mapWrap" onclick="handleMapClick(event)" ondblclick="handleMapDoubleClick(event)" ontouchstart="handleMapTouchStart(event)" ontouchmove="handleMapTouchMove(event)" ontouchend="handleMapTouchEnd(event)">
         <div id="map" style="width:100%; height:210px; background:#DCEBF7; display:flex; align-items:center; justify-content:center; color:#5C6B8A; font-size:12px; text-align:center; padding:12px;">
@@ -428,11 +460,12 @@ body{
         </div>
         <div class="map-badge" id="mapBadge">📍 西屯區・預設位置</div>
         <button class="map-expand-btn" onclick="toggleMapFullscreen(true); event.stopPropagation();">展開地圖</button>
-        <button class="map-exit-btn" onclick="toggleMapFullscreen(false); event.stopPropagation();">退出全螢幕</button>
-        <button class="map-friends-btn" onclick="fitFriendMapBounds(); event.stopPropagation();">查看好友</button>
-        <button class="map-recenter-btn" onclick="recenterFullscreenMap(); event.stopPropagation();">回到我</button>
-        <button class="locate-btn" onclick="locateMe()" id="locateBtn">🎯 定位我</button>
-      </div>
+	        <button class="map-exit-btn" onclick="toggleMapFullscreen(false); event.stopPropagation();">退出全螢幕</button>
+	        <button class="map-friends-btn" onclick="toggleFriendMapPicker(); event.stopPropagation();">查看好友</button>
+	        <button class="map-recenter-btn" onclick="recenterFullscreenMap(); event.stopPropagation();">回到我</button>
+	        <button class="locate-btn" onclick="locateMe()" id="locateBtn">🎯 定位我</button>
+	        <div class="map-friend-picker" id="mapFriendPicker"></div>
+	      </div>
       <div class="map-exit-zone" id="mapExitZone" onclick="toggleMapFullscreen(false)" aria-label="退出全螢幕地圖"></div>
       <div class="mapline-actions">
         <button class="mini-link" onclick="openGoogleMapsHere()">在 Google Maps 開啟</button>
@@ -532,13 +565,14 @@ body{
       </div>
 
       <div class="online-panel">
-        <h3>散步小隊</h3>
-        <div id="partyStatus" class="empty-online">第一版先做即時好友定位；小隊會用同一套連線資料顯示一起散步的人。</div>
-        <div id="partyInvitePicker"></div>
-        <div class="online-actions" style="margin-top:10px;">
-          <button class="btn btn-primary" onclick="createWalkParty()">建立小隊</button>
-          <button class="btn btn-ghost" id="leavePartyBtn" onclick="leaveWalkParty()">離開小隊</button>
-        </div>
+	        <h3>散步小隊</h3>
+	        <div id="partyStatus" class="empty-online">第一版先做即時好友定位；小隊會用同一套連線資料顯示一起散步的人。</div>
+	        <div id="partyInvitesList"></div>
+	        <div id="partyInvitePicker"></div>
+	        <div class="online-actions" style="margin-top:10px;">
+	          <button class="btn btn-primary" id="partyPrimaryBtn" onclick="createWalkParty()">建立小隊</button>
+	          <button class="btn btn-ghost" id="leavePartyBtn" onclick="leaveWalkParty()">離開小隊</button>
+	        </div>
       </div>
     </div>
 
@@ -565,8 +599,7 @@ body{
       </div>
       <div class="section-title">週／月城市回顧</div>
       <div class="review-list" id="reviewList"></div>
-      <button class="btn btn-primary gen-btn" onclick="openGenerate()">✨ 用碎片生成新寵物（100）</button>
-      <div class="principle"><b>可以花碎片生出寵物，但不能花錢買到牠的回憶。</b><br>成長靠真實步行，配件靠親自到訪。</div>
+	      <div class="principle"><b>寵物會從你的寵物蛋隨機孵化。</b><br>成長靠真實步行、到訪紀錄與盲盒路線，不再用照片或碎片直接生成。</div>
     </div>
 
   </div>
@@ -650,9 +683,13 @@ let state = {
   steps: 0,
   stepGoal: 8000,
   bond: 62,
-  level: 1,
+  userLevel: 1,
+  userXp: 0,
+  petLevel: 1,
+  petXp: 0,
   eggName: '小芽蛋',
   petName: '小豆',
+  petSpecies: '',
   hatchPoints: 0,
   hatchGoal: 100,
   hatched: false,
@@ -703,17 +740,20 @@ function loadLocalProgress(){
   const visitLogs = readJsonStore(VISIT_LOG_KEY, {});
   const petLog = readJsonStore(PET_LOG_KEY, {});
   const today = todayKey();
-  state.steps = Math.max(0, Number(stepLogs[today]?.steps || 0));
-  state.level = Math.max(1, Math.floor(state.steps / 3000) + 1);
-  state.visited = visitLogs.visited || {};
-  state.equipped = Array.isArray(visitLogs.equipped) ? visitLogs.equipped : state.equipped;
-  state.eggName = String(petLog.eggName || state.eggName).slice(0, 12);
-  state.petName = String(petLog.petName || state.petName || state.eggName).slice(0, 12);
-  state.hatchPoints = Math.max(0, Math.floor(Number(petLog.hatchPoints) || 0));
-  state.hatchGoal = Math.max(1, Math.floor(Number(petLog.hatchGoal) || state.hatchGoal));
-  state.hatched = Boolean(petLog.hatched) || state.hatchPoints >= state.hatchGoal;
-  if(state.hatched) state.petName = state.petName || state.eggName;
-}
+	  state.steps = Math.max(0, Number(stepLogs[today]?.steps || 0));
+	  state.visited = visitLogs.visited || {};
+	  state.equipped = Array.isArray(visitLogs.equipped) ? visitLogs.equipped : state.equipped;
+	  state.eggName = String(petLog.eggName || state.eggName).slice(0, 12);
+	  state.petName = String(petLog.petName || state.petName || state.eggName).slice(0, 12);
+	  state.petSpecies = String(petLog.petSpecies || state.petSpecies || '').slice(0, 24);
+	  state.hatchPoints = Math.max(0, Math.floor(Number(petLog.hatchPoints) || 0));
+	  state.hatchGoal = Math.max(1, Math.floor(Number(petLog.hatchGoal) || state.hatchGoal));
+	  state.hatched = Boolean(petLog.hatched) || state.hatchPoints >= state.hatchGoal;
+	  state.userXp = Math.max(0, Math.floor(Number(petLog.userXp) || computeUserXp()));
+	  state.petXp = Math.max(0, Math.floor(Number(petLog.petXp) || computePetXp()));
+	  updateLevels();
+	  if(state.hatched) state.petName = state.petName || state.eggName;
+	}
 
 function persistStepLog(){
   const date = todayKey();
@@ -736,15 +776,37 @@ function persistVisitLog(){
 }
 
 function persistPetLog(){
-  writeJsonStore(PET_LOG_KEY, {
-    eggName: state.eggName,
-    petName: state.petName,
-    hatchPoints: state.hatchPoints,
-    hatchGoal: state.hatchGoal,
-    hatched: state.hatched,
-    updatedAt: Date.now(),
-  });
-}
+	  writeJsonStore(PET_LOG_KEY, {
+	    eggName: state.eggName,
+	    petName: state.petName,
+	    petSpecies: state.petSpecies,
+	    hatchPoints: state.hatchPoints,
+	    hatchGoal: state.hatchGoal,
+	    hatched: state.hatched,
+	    userXp: state.userXp,
+	    petXp: state.petXp,
+	    updatedAt: Date.now(),
+	  });
+	}
+
+	function computeUserXp(){
+	  return Math.floor(state.steps / 100) + Object.keys(state.visited || {}).length * 40 + (state.routeHistory || []).length * 90;
+	}
+
+	function computePetXp(){
+	  return Math.floor(state.hatchPoints / 2) + Math.floor(state.bond / 4) + Object.keys(state.visited || {}).length * 24 + (state.routeHistory || []).length * 60;
+	}
+
+	function levelFromXp(xp){
+	  return Math.max(1, Math.floor(Math.sqrt(Math.max(0, xp) / 55)) + 1);
+	}
+
+	function updateLevels(){
+	  state.userXp = Math.max(state.userXp || 0, computeUserXp());
+	  state.petXp = Math.max(state.petXp || 0, computePetXp());
+	  state.userLevel = levelFromXp(state.userXp);
+	  state.petLevel = state.hatched ? levelFromXp(state.petXp) : 1;
+	}
 
 function setTodaySteps(steps, source = 'motion'){
   const today = todayKey();
@@ -754,9 +816,9 @@ function setTodaySteps(steps, source = 'motion'){
   }
   const nextSteps = Math.max(0, Math.floor(Number(steps) || 0));
   if(nextSteps === state.steps) return;
-  state.steps = nextSteps;
-  state.level = Math.max(1, Math.floor(state.steps / 3000) + 1);
-  renderTop();
+	  state.steps = nextSteps;
+	  updateLevels();
+	  renderTop();
   if(document.getElementById('screen-pet')?.classList.contains('active')) renderPet();
   persistStepLog();
   updateStepStatus(source === 'reset' ? '已切換到新的一天，步數從 0 開始。' : `今日已記錄 ${state.steps.toLocaleString()} 步`);
@@ -936,8 +998,21 @@ function haversineSteps(lat1,lng1,lat2,lng2){
   const dist=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
   return {meters:Math.round(dist), steps:Math.round(dist/0.75)};
 }
+function normalizeLocationRule(location){
+  const rule = routeRuleForType(location.type);
+  location.routeRuleKey = location.routeRuleKey || rule.key;
+  location.routeTheme = location.routeTheme || rule.theme;
+  location.taskable = location.taskable ?? rule.taskable;
+  location.landmarkOK = location.landmarkOK ?? rule.landmarkOK;
+  location.routeUse = location.routeUse || rule.use;
+  return location;
+}
+
 function recomputeDistances(){
-  LOCATIONS.forEach(l=>{ const d=haversineSteps(HERE.lat,HERE.lng,l.lat,l.lng); l.distM=d.meters; l.distSteps=d.steps; });
+  LOCATIONS.forEach(l=>{
+    const d=haversineSteps(HERE.lat,HERE.lng,l.lat,l.lng);
+    l.distM=d.meters; l.distSteps=d.steps;
+  });
 }
 recomputeDistances();
 
@@ -949,9 +1024,9 @@ function minutesForQuest(label){
 }
 
 function routeSizeForQuest(minutes){
-  if(minutes >= 120) return Math.min(4, LOCATIONS.length);
-  if(minutes >= 60) return Math.min(3, LOCATIONS.length);
-  return Math.min(2, LOCATIONS.length);
+  if(minutes >= 120) return 5;
+  if(minutes >= 60) return 4;
+  return 3;
 }
 
 function formatQuestTime(ms){
@@ -1002,29 +1077,77 @@ function questLegGuide(from, to){
 
 function renderQuestGuide(guide, activeLocation){
   const precise = guide.meters >= 1000 ? `${(guide.meters / 1000).toFixed(1)} km` : `${guide.meters} m`;
+  const reason = explainRouteSelection(activeLocation, guide.meters);
   return `
     <div class="quest-checks">
       <div class="quest-check pass"><span>➤</span><span><b>方向</b><br>朝 ${guide.direction} 方前進，約 ${guide.bearing}°。</span></div>
       <div class="quest-check pass"><span>◎</span><span><b>距離</b><br>本段約 ${precise}，大約 ${guide.steps.toLocaleString()} 步，步行約 ${guide.minutes} 分鐘。</span></div>
       <div class="quest-check pass"><span>◇</span><span><b>抵達判定</b><br>靠近目標 ${guide.nearMeters} m 內時，尋找「${activeLocation.tag}」類型的公開可停留地點，再完成照片任務。</span></div>
+      <div class="quest-check pass"><span>?</span><span><b>選點理由</b><br>${reason}</span></div>
     </div>
   `;
 }
 
 function pickQuestRoute(){
   const minutes = minutesForQuest(questState.selectedTime);
-  const count = routeSizeForQuest(minutes);
-  const lowerTheme = questState.selectedTheme;
-  const preferred = LOCATIONS.filter((location) => {
-    if(lowerTheme.includes('咖啡')) return ['cafe','dessert','book'].includes(location.type);
-    if(lowerTheme.includes('自然')) return ['park','scenic'].includes(location.type);
-    if(lowerTheme.includes('老街') || lowerTheme.includes('建築')) return ['book','night','park','scenic'].includes(location.type);
-    return true;
-  });
-  const source = (preferred.length >= count ? preferred : LOCATIONS)
-    .slice()
-    .sort((a,b) => a.distSteps - b.distSteps);
-  return source.slice(0, count);
+  const count = Math.min(routeSizeForQuest(minutes), LOCATIONS.length);
+  const radiusKm = maxQuestRadiusKm(minutes, questState.selectedPace);
+  const theme = questState.selectedTheme;
+  const candidates = LOCATIONS
+    .map(normalizeLocationRule)
+    .filter((location) => location.taskable)
+    .filter((location) => location.distM <= radiusKm * 1000 || LOCATIONS.length <= count)
+    .filter((location) => routeThemeMatches(location, theme));
+  const fallback = LOCATIONS.map(normalizeLocationRule).filter((location) => location.taskable);
+  const pool = (candidates.length >= count ? candidates : fallback).slice();
+  if(!pool.length) return LOCATIONS.slice(0, count);
+  const route = [];
+  let from = {lat:HERE.lat, lng:HERE.lng};
+  for(let i = 0; i < count; i++){
+    const remaining = pool.filter((location) => !route.some((picked) => picked.id === location.id));
+    if(!remaining.length) break;
+    const isFinal = i === count - 1;
+    const finalPool = isFinal ? remaining.filter((location) => location.landmarkOK) : remaining;
+    const choice = pickWeightedRouteNode(finalPool.length ? finalPool : remaining, from);
+    if(!choice) break;
+    route.push(choice);
+    from = choice;
+  }
+  return route;
+}
+
+function maxQuestRadiusKm(minutes, pace){
+  const travelBudgetMin = minutes * 0.5;
+  const walkSpeedKmH = pace === '慢慢走' ? 3.2 : pace === '避開階梯' ? 3.6 : 4.5;
+  return Math.max(0.6, (travelBudgetMin / 60) * walkSpeedKmH);
+}
+
+function routeThemeMatches(location, theme){
+  if(!theme || theme === '隨機') return true;
+  if(location.routeTheme === '全主題') return true;
+  if(theme.includes('咖啡')) return ['cafe','dessert'].includes(location.type);
+  if(theme.includes('自然')) return location.routeTheme === '自然縫隙';
+  if(theme.includes('老街')) return location.routeTheme === '老街痕跡';
+  if(theme.includes('建築')) return location.routeTheme === '建築細節';
+  if(theme.includes('色彩')) return location.routeTheme === '城市色彩' || location.routeTheme === '全主題';
+  return true;
+}
+
+function pickWeightedRouteNode(nodes, from){
+  const weights = nodes.map((location) => 1 / ((haversineSteps(from.lat, from.lng, location.lat, location.lng).meters / 1000) + 0.05));
+  const total = weights.reduce((sum, value) => sum + value, 0);
+  let cursor = Math.random() * total;
+  for(let i = 0; i < nodes.length; i++){
+    cursor -= weights[i];
+    if(cursor <= 0) return nodes[i];
+  }
+  return nodes.at(-1);
+}
+
+function explainRouteSelection(location, distanceM){
+  const rule = routeRuleForType(location.type);
+  const theme = location.routeTheme || rule.theme || '方向參照';
+  return `因為在「${theme}」規則下，距離約 ${Math.round(distanceM)} 公尺內找到「${location.routeRuleKey || rule.key}」類別的真實公共場域；${location.routeUse || rule.use}。`;
 }
 
 function renderQuest(){
@@ -1216,8 +1339,6 @@ async function handleQuestPhoto(event){
   renderQuest();
 }
 
-function todayKey(){ return new Date().toISOString().slice(0,10); }
-
 function useOrdinaryQuestSkip(){
   if(state.ordinarySkipDate === todayKey()){
     toast('今日普通略過已使用，安全需求仍可免費略過');
@@ -1255,7 +1376,9 @@ function completeBlindQuest(){
   const reward = 10 + questState.route.length * 2 + (completedInTime ? 5 : 0);
   state.fragments += reward;
   state.bond = Math.min(100, state.bond + 5);
-  state.level = Math.max(state.level, Math.floor(state.steps / 3000) + 1);
+	  state.userXp += 90;
+	  state.petXp += 60;
+	  updateLevels();
   awardHatchPoints(30, '盲盒路線');
   const finalLoc = questState.route.at(-1);
   const entry = {
@@ -1355,9 +1478,10 @@ function receiveOnlineSnapshot(snapshot){
     selectedInviteUids = new Set();
     inviteSelectionTouched = false;
   }
-  renderOnline();
-  renderProfile();
-  renderFriendMarkers();
+	  renderOnline();
+	  renderProfile();
+	  renderTop();
+	  renderFriendMarkers();
   placeUserMarker();
   handleNotificationLaunch();
 }
@@ -1404,10 +1528,12 @@ function renderOnline(){
   const shareBtn = document.getElementById('shareLocationBtn');
   const sharingDot = document.getElementById('sharingDot');
   const sharingText = document.getElementById('sharingText');
-  const shareTargetPicker = document.getElementById('shareTargetPicker');
-  const partyStatus = document.getElementById('partyStatus');
-  const partyInvitePicker = document.getElementById('partyInvitePicker');
-  const leavePartyBtn = document.getElementById('leavePartyBtn');
+	  const shareTargetPicker = document.getElementById('shareTargetPicker');
+	  const partyStatus = document.getElementById('partyStatus');
+	  const partyInvitesList = document.getElementById('partyInvitesList');
+	  const partyInvitePicker = document.getElementById('partyInvitePicker');
+	  const leavePartyBtn = document.getElementById('leavePartyBtn');
+	  const partyPrimaryBtn = document.getElementById('partyPrimaryBtn');
   if(!status || !auth) return;
 
   status.textContent = ready ? (signedIn ? '已連線，可以和好友同步位置' : 'Firebase 已設定，請登入') : '尚未設定 Firebase，連線功能先以離線狀態顯示';
@@ -1432,9 +1558,13 @@ function renderOnline(){
   sharingDot.classList.toggle('on', !!onlineState.sharing);
   const shareTargetCount = (onlineState.shareTargetUids || []).length;
   sharingText.textContent = onlineState.sharing ? `分享中・給 ${shareTargetCount} 位好友${onlineState.lastSharedAt ? '・' + timeAgo(onlineState.lastSharedAt) : ''}` : '尚未分享位置';
-  if(leavePartyBtn){
-    leavePartyBtn.textContent = onlineState.party?.hostUid === onlineState.user?.uid ? '解散小隊' : '離開小隊';
-  }
+	  if(leavePartyBtn){
+	    leavePartyBtn.textContent = onlineState.party?.hostUid === onlineState.user?.uid ? '解散小隊' : '離開小隊';
+	    leavePartyBtn.style.display = signedIn && onlineState.party ? 'block' : 'none';
+	  }
+	  if(partyPrimaryBtn){
+	    partyPrimaryBtn.textContent = onlineState.party ? '邀請好友' : '建立小隊';
+	  }
 
   renderShareTargetPicker(shareTargetPicker, signedIn);
 
@@ -1447,11 +1577,12 @@ function renderOnline(){
   } else {
     list.className = '';
     list.innerHTML = onlineState.friends.map(friendCardHtml).join('');
-  }
+	  }
 
-  renderPartyInvitePicker(partyInvitePicker, signedIn);
+	  renderPartyInvites(partyInvitesList, signedIn);
+	  renderPartyInvitePicker(partyInvitePicker, signedIn);
 
-  if(onlineState.party){
+	  if(onlineState.party){
     partyStatus.className = 'empty-online';
     const members = Object.values(onlineState.party.members || {});
     partyStatus.innerHTML = `
@@ -1459,26 +1590,39 @@ function renderOnline(){
       ${escapeHtml(onlineState.party.goal || '一起散步')}<br>
       成員：${members.map((m) => escapeHtml(m.displayName || '玩家')).join('、') || '只有你'}
     `;
-  } else if(onlineState.partyInvites.length){
-    partyStatus.className = '';
-    partyStatus.innerHTML = onlineState.partyInvites.map((invite) => `
-      <div class="friend-card">
-        ${avatarMarkup({ photoURL: invite.hostPhotoURL }, invite.hostName || '隊')}
-        <div class="friend-main">
-          <div class="friend-name">${escapeHtml(invite.hostName || '好友')} 邀請你散步</div>
-          <div class="friend-meta">${escapeHtml(invite.goal || '一起散步')}</div>
-        </div>
-        <button class="btn btn-primary" onclick="joinWalkParty('${escapeHtml(invite.partyId)}')">加入</button>
-      </div>
-    `).join('');
-  } else {
-    partyStatus.className = 'empty-online';
-    partyStatus.textContent = signedIn ? '尚未建立小隊。建立後，好友清單會變成一起散步的小隊看板。' : '登入後可以建立散步小隊。';
-  }
-}
+	  } else {
+	    partyStatus.className = 'empty-online';
+	    partyStatus.textContent = signedIn ? '尚未建立小隊。建立後，好友清單會變成一起散步的小隊看板。' : '登入後可以建立散步小隊。';
+	  }
+	}
+
+	function renderPartyInvites(container, signedIn){
+	  if(!container) return;
+	  if(!signedIn || !onlineState.partyInvites.length){
+	    container.innerHTML = '';
+	    return;
+	  }
+	  container.innerHTML = `
+	    <div class="party-picker">
+	      <div class="party-picker-title">收到的小隊邀請</div>
+	      ${onlineState.partyInvites.map((invite) => `
+	        <div class="friend-card">
+	          ${avatarMarkup({ photoURL: invite.hostPhotoURL }, invite.hostName || '隊')}
+	          <div class="friend-main">
+	            <div class="friend-name">${escapeHtml(invite.hostName || '好友')} 邀請你散步</div>
+	            <div class="friend-meta">${escapeHtml(invite.goal || '一起散步')}</div>
+	          </div>
+	          <button class="btn btn-primary" onclick="joinWalkParty('${escapeHtml(invite.partyId)}')">加入</button>
+	          <button class="btn btn-ghost" onclick="declineWalkParty('${escapeHtml(invite.partyId)}')">拒絕</button>
+	        </div>
+	      `).join('')}
+	    </div>
+	  `;
+	}
 
 function syncInviteSelection(){
   const friendIds = new Set((onlineState.friends || []).map((friend) => friend.uid).filter(Boolean));
+  Object.keys(onlineState.party?.members || {}).forEach((uid) => friendIds.delete(uid));
   selectedInviteUids = new Set([...selectedInviteUids].filter((uid) => friendIds.has(uid)));
   if(!inviteSelectionTouched){
     selectedInviteUids = new Set(friendIds);
@@ -1530,14 +1674,25 @@ function renderShareTargetPicker(container, signedIn){
 function renderPartyInvitePicker(container, signedIn){
   if(!container) return;
   syncInviteSelection();
-  if(!signedIn || onlineState.party || !onlineState.friends.length){
+  if(!signedIn || !onlineState.friends.length){
     container.innerHTML = '';
+    return;
+  }
+  const members = new Set(Object.keys(onlineState.party?.members || {}));
+  const inviteableFriends = onlineState.friends.filter((friend) => friend.uid && !members.has(friend.uid));
+  if(onlineState.party && onlineState.party.hostUid !== onlineState.user?.uid){
+    container.innerHTML = '<div class="empty-online" style="margin-top:10px;">只有小隊建立人可以追加邀請好友。</div>';
+    return;
+  }
+  if(!inviteableFriends.length){
+    container.innerHTML = onlineState.party ? '<div class="empty-online" style="margin-top:10px;">目前所有好友都已在小隊中，或沒有可邀請的好友。</div>' : '';
     return;
   }
   container.innerHTML = `
     <div class="party-picker">
-      <div class="party-picker-title">選擇要邀請的好友</div>
-      ${onlineState.friends.map((friend) => `
+      <div class="party-picker-title">${onlineState.party ? '追加邀請好友' : '選擇要邀請的好友'}</div>
+      <div class="party-picker-note">只會邀請勾選的好友，不會一鍵全發。</div>
+      ${inviteableFriends.map((friend) => `
         <label class="party-choice">
           <input type="checkbox" ${selectedInviteUids.has(friend.uid) ? 'checked' : ''} onchange="toggleInviteFriend('${escapeHtml(friend.uid)}', this.checked)">
           ${avatarMarkup(friend, friend.displayName || '友')}
@@ -1891,8 +2046,13 @@ function toggleShareFriend(uid, checked){
 
 function createWalkParty(){
   if(!onlineState.user){ toast('請先登入'); return; }
-  if(onlineState.party){ toast('你已在小隊中，需先退出才能建立新的小隊'); return; }
   const inviteUids = [...selectedInviteUids];
+  if(onlineState.party){
+    if(onlineState.party.hostUid !== onlineState.user.uid){ toast('只有小隊建立人可以追加邀請'); return; }
+    if(!inviteUids.length){ toast('請先勾選要邀請的好友'); return; }
+    window.FootprintOnline?.inviteToParty?.(inviteUids);
+    return;
+  }
   window.FootprintOnline?.createParty?.(inviteUids);
 }
 
@@ -1906,6 +2066,11 @@ function joinWalkParty(partyId){
   if(!onlineState.user){ toast('請先登入'); return; }
   if(onlineState.party && onlineState.party.id !== partyId){ toast('你已在小隊中，請先退出目前小隊'); return; }
   window.FootprintOnline?.joinParty?.(partyId);
+}
+
+function declineWalkParty(partyId){
+  if(!onlineState.user){ toast('請先登入'); return; }
+  window.FootprintOnline?.declineParty?.(partyId);
 }
 
 function leaveWalkParty(){
@@ -1937,8 +2102,35 @@ function renderFriendMarkers(){
     });
     marker.friendUid = friend.uid;
     return marker;
-  });
-}
+	  });
+	}
+
+	function renderMapFriendPicker(){
+	  const picker = document.getElementById('mapFriendPicker');
+	  if(!picker) return;
+	  const friendsWithLocation = onlineState.friends.filter((friend) => validLatLng(friend.location));
+	  if(!friendsWithLocation.length){
+	    picker.innerHTML = '<div class="empty-online">目前沒有好友分享位置。</div>';
+	    return;
+	  }
+	  picker.innerHTML = friendsWithLocation.map((friend) => `
+	    <button class="map-friend-option" onclick="focusFriendOnMap('${escapeHtml(friend.uid)}'); event.stopPropagation();">
+	      ${avatarMarkup(friend, friend.displayName || '友')}
+	      <span><b>${escapeHtml(friend.displayName || '好友')}</b><span>${escapeHtml(friendDistanceText(friend))}・${escapeHtml(friendLocationSummary(friend))}</span></span>
+	    </button>
+	  `).join('');
+	}
+
+	function toggleFriendMapPicker(force){
+	  const picker = document.getElementById('mapFriendPicker');
+	  const wrap = document.getElementById('mapWrap');
+	  if(!picker || !wrap) return;
+	  if(!wrap.classList.contains('map-fullscreen')) toggleMapFullscreen(true);
+	  renderMapFriendPicker();
+	  const next = typeof force === 'boolean' ? force : !picker.classList.contains('open');
+	  picker.classList.toggle('open', next);
+	  if(next && !onlineState.friends.some((friend) => validLatLng(friend.location))) toast('目前沒有好友分享位置');
+	}
 
 function openFriendInfo(friend, marker = null){
   if(!map || !window.google?.maps) return;
@@ -1974,18 +2166,20 @@ function fitMapToPoints(points, maxZoom = 15){
 }
 
 function fitFriendMapBounds(){
-  const friendPoints = onlineState.friends.map((friend) => validLatLng(friend.location)).filter(Boolean);
-  if(!friendPoints.length){ toast('目前沒有好友分享位置'); return; }
-  fitMapToPoints([mapOriginPoint(), ...friendPoints], 8);
-  toast(`已顯示 ${friendPoints.length} 位好友位置`);
-}
+	  const friendPoints = onlineState.friends.map((friend) => validLatLng(friend.location)).filter(Boolean);
+	  if(!friendPoints.length){ toast('目前沒有好友分享位置'); return; }
+	  toggleFriendMapPicker(false);
+	  fitMapToPoints([mapOriginPoint(), ...friendPoints], 8);
+	  toast(`已顯示 ${friendPoints.length} 位好友位置`);
+	}
 
 function focusFriendOnMap(uid){
   const friend = onlineState.friends.find((item) => item.uid === uid);
   const friendPoint = validLatLng(friend?.location);
   if(!friendPoint){ toast('這位好友尚未分享位置'); return; }
-  showTab('map');
-  toggleMapFullscreen(true);
+	  showTab('map');
+	  toggleMapFullscreen(true);
+	  toggleFriendMapPicker(false);
   setTimeout(() => {
     fitMapToPoints([mapOriginPoint(), friendPoint], 8);
     const marker = friendMarkers.find((item) => item.friendUid === uid) || null;
@@ -2052,10 +2246,11 @@ function toggleMapFullscreen(force){
     screen.dataset.preFullscreenScroll = String(screen.scrollTop || 0);
     screen.scrollTop = 0;
   }
-  wrap.classList.toggle('map-fullscreen', next);
-  screen?.classList.toggle('map-fullscreen-active', next);
-  exitZone?.classList.toggle('active', next);
-  document.body.style.overflow = next ? 'hidden' : '';
+	  wrap.classList.toggle('map-fullscreen', next);
+	  screen?.classList.toggle('map-fullscreen-active', next);
+	  exitZone?.classList.toggle('active', next);
+	  if(!next) document.getElementById('mapFriendPicker')?.classList.remove('open');
+	  document.body.style.overflow = next ? 'hidden' : '';
   if(!next && screen?.dataset.preFullscreenScroll){
     screen.scrollTop = Math.min(Number(screen.dataset.preFullscreenScroll) || 0, screen.scrollHeight);
     delete screen.dataset.preFullscreenScroll;
@@ -2269,13 +2464,17 @@ function loadNearbyPlacesFromGoogleMaps(apiLayer){
       reject(new Error('Google Maps Places library is not ready'));
       return;
     }
-    const includedTypes = {
-      all: [],
-      food: ['restaurant', 'cafe', 'bakery', 'meal_takeaway'],
-      scenic: ['tourist_attraction', 'park', 'museum'],
-      cafe: ['cafe'],
-      walk: ['park', 'tourist_attraction', 'library', 'museum'],
-    }[apiLayer] || [];
+	    const includedTypes = {
+	      all: ['restaurant', 'cafe', 'bakery', 'park', 'tourist_attraction', 'museum', 'convenience_store', 'supermarket'],
+	      food: ['restaurant', 'meal_takeaway'],
+	      scenic: ['tourist_attraction', 'museum'],
+	      cafe: ['cafe'],
+	      dessert: ['bakery'],
+	      park: ['park'],
+	      convenience: ['convenience_store'],
+	      supermarket: ['supermarket'],
+	      walk: ['park', 'tourist_attraction', 'museum'],
+	    }[apiLayer] || [];
     const service = new google.maps.places.PlacesService(map);
     const baseRequest = {
       location: new google.maps.LatLng(HERE.lat, HERE.lng),
@@ -2447,7 +2646,64 @@ function petSVG(size, color, accessories){
     ${wearGlasses?`<circle cx="78" cy="98" r="13" fill="none" stroke="#1C2541" stroke-width="3"/><circle cx="122" cy="98" r="13" fill="none" stroke="#1C2541" stroke-width="3"/><line x1="91" y1="98" x2="109" y2="98" stroke="#1C2541" stroke-width="3"/>`:''}
     ${wearHat?`<path d="M62 42 Q100 8 138 42 L132 50 Q100 26 68 50 Z" fill="#FFC93C"/><circle cx="100" cy="18" r="7" fill="#FF6B5B"/>`:''}
     ${wearHold?`<circle cx="45" cy="130" r="12" fill="#fff" stroke="#D9822B" stroke-width="3"/>`:''}
-  </svg>`;
+	  </svg>`;
+	}
+
+const PET_SPECIES = [
+  { id:'mossling', name:'苔芽獸', body:'#6CCB7F', head:'#7DDA8A', belly:'#FFF3B0', accent:'#2FB16D', parts:['sprout','tail'], trait:'頭頂會長出小芽，喜歡公園和雨後牆角。' },
+  { id:'lanternpup', name:'燈絨獸', body:'#FFB35C', head:'#FFC77A', belly:'#FFF1D0', accent:'#FF6B5B', parts:['ears','tail'], trait:'耳朵像小燈籠，完成夜間或招牌任務時特別活躍。' },
+  { id:'drizzlefin', name:'雨鰭獸', body:'#63C7D8', head:'#8FDEF0', belly:'#EAFBFF', accent:'#4B8BFF', parts:['fins','tail'], trait:'身側有透明鰭片，擅長記住河道、天橋與潮濕街景。' },
+  { id:'bookmoth', name:'頁翼獸', body:'#B79CFF', head:'#D2C3FF', belly:'#FFF7D8', accent:'#7C5CFC', parts:['wings','ears'], trait:'背後有書頁狀翅膀，會把路線整理成圖鑑回憶。' },
+];
+
+function pickPetSpecies(){
+  const seed = `${state.eggName || ''}-${Object.keys(state.visited || {}).length}-${state.steps}-${Date.now()}`;
+  let hash = 0;
+  for(let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return PET_SPECIES[hash % PET_SPECIES.length].id;
+}
+
+function currentPetSpecies(){
+  const id = state.petSpecies || pickPetSpecies();
+  return PET_SPECIES.find((species) => species.id === id) || PET_SPECIES[0];
+}
+
+function pet3DHtml(species = currentPetSpecies(), includeNote = true){
+  const part = (name, className) => species.parts.includes(name) ? `<i class="pet3d-part ${className}"></i>` : '';
+  return `
+    <div class="pet3d-model" data-testid="pet-3d-model" style="--body:${species.body};--head:${species.head};--belly:${species.belly};--accent:${species.accent};">
+      <i class="pet3d-shadow"></i>
+      ${part('wings','pet3d-wing left')}${part('wings','pet3d-wing right')}
+      <i class="pet3d-body"></i>
+      <i class="pet3d-head">
+        ${part('ears','pet3d-ear left')}${part('ears','pet3d-ear right')}${part('sprout','pet3d-sprout')}
+        <i class="pet3d-belly"></i>
+        <i class="pet3d-eye left"></i><i class="pet3d-eye right"></i><i class="pet3d-mouth"></i>
+      </i>
+      ${part('fins','pet3d-fin left')}${part('fins','pet3d-fin right')}${part('tail','pet3d-tail')}
+    </div>
+    ${includeNote ? `<div class="pet-species-note">${species.name}・拖曳可以 360° 旋轉查看</div>` : ''}
+  `;
+}
+
+function bindPet3DRotation(){
+  const holder = document.getElementById('petHolder');
+  const model = holder?.querySelector('.pet3d-model');
+  if(!holder || !model) return;
+  let dragging = false;
+  let startX = 0;
+  let rotation = -24;
+  const setRotation = (value) => {
+    rotation = value;
+    model.style.setProperty('--pet-rot-y', `${rotation}deg`);
+  };
+  const start = (x) => { dragging = true; startX = x; holder.style.cursor = 'grabbing'; };
+  const move = (x) => { if(dragging) setRotation(rotation + (x - startX) * 0.9), startX = x; };
+  const end = () => { dragging = false; holder.style.cursor = ''; };
+  holder.addEventListener('pointerdown', (event) => { holder.setPointerCapture?.(event.pointerId); start(event.clientX); });
+  holder.addEventListener('pointermove', (event) => move(event.clientX));
+  holder.addEventListener('pointerup', end);
+  holder.addEventListener('pointercancel', end);
 }
 
 /* ================= ACCESSORY DEFINITIONS (tied to locations) ================= */
@@ -2464,7 +2720,15 @@ const ACC_MAP = {
 
 function iconForType(type){
   if(type === 'cafe') return '☕';
+  if(type === 'convenience') return '🏪';
+  if(type === 'supermarket') return '🛒';
   if(type === 'park' || type === 'scenic') return '🍁';
+  if(type === 'school') return '🏫';
+  if(type === 'bank') return '🏦';
+  if(type === 'station') return '🚉';
+  if(type === 'shop') return '👕';
+  if(type === 'market') return '🧺';
+  if(type === 'entertainment') return '🎬';
   if(type === 'book') return '📚';
   if(type === 'dessert') return '🍧';
   if(type === 'night') return '🏮';
@@ -2474,8 +2738,16 @@ function iconForType(type){
 function tagForType(type){
   return {
     cafe: '咖啡廳',
+    convenience: '便利商店',
+    supermarket: '超市',
     park: '公園',
     scenic: '景點',
+    school: '學校',
+    bank: '銀行',
+    station: '車站',
+    shop: '服飾店',
+    market: '市場',
+    entertainment: '娛樂',
     book: '書店',
     dessert: '甜點',
     night: '夜市',
@@ -2485,24 +2757,38 @@ function tagForType(type){
 
 function layerForApi(filter){
   if(filter === 'cafe') return 'cafe';
-  if(filter === 'park' || filter === 'scenic' || filter === 'book') return 'scenic';
-  if(filter === 'dessert' || filter === 'night' || filter === 'food') return 'food';
+  if(filter === 'park') return 'park';
+  if(filter === 'scenic') return 'scenic';
+  if(filter === 'convenience') return 'convenience';
+  if(filter === 'supermarket') return 'supermarket';
+  if(filter === 'dessert') return 'dessert';
+  if(filter === 'food') return 'food';
   return 'all';
 }
 
 function typeFromPlace(place){
   const tokens = [place.category, ...(place.types || [])].filter(Boolean).join(' ').toLowerCase();
+  if(tokens.includes('school') || tokens.includes('university')) return 'school';
+  if(tokens.includes('bank') || tokens.includes('atm')) return 'bank';
+  if(tokens.includes('train_station') || tokens.includes('subway_station') || tokens.includes('transit_station') || tokens.includes('bus_station')) return 'station';
+  if(tokens.includes('convenience_store')) return 'convenience';
+  if(tokens.includes('supermarket') || tokens.includes('grocery_or_supermarket')) return 'supermarket';
   if(tokens.includes('cafe')) return 'cafe';
   if(tokens.includes('park')) return 'park';
+  if(tokens.includes('clothing_store')) return 'shop';
+  if(tokens.includes('movie_theater') || tokens.includes('amusement')) return 'entertainment';
   if(tokens.includes('book_store') || tokens.includes('library')) return 'book';
-  if(tokens.includes('bakery')) return 'dessert';
+  if(tokens.includes('bakery') || tokens.includes('ice_cream') || tokens.includes('dessert')) return 'dessert';
   if(tokens.includes('tourist_attraction') || tokens.includes('museum') || tokens.includes('place_of_worship')) return 'scenic';
+  if(tokens.includes('restaurant') || tokens.includes('meal_takeaway') || tokens.includes('meal_delivery') || tokens.includes('food')) return 'food';
   return 'food';
 }
 
 function colorForType(type, index){
   const colors = {
     cafe: '#FFD9C9',
+    convenience: '#E6F7E9',
+    supermarket: '#EAF3FF',
     park: '#DFF3E0',
     scenic: '#CFE8FF',
     book: '#E7E3FF',
@@ -2511,6 +2797,34 @@ function colorForType(type, index){
     food: '#FFF1D6',
   };
   return colors[type] || ['#FFD9C9', '#DFF3E0', '#E7E3FF', '#CFE8FF'][index % 4];
+}
+
+const ROUTE_RULES = {
+  school: { key:'school', theme:'建築細節', taskable:true, landmarkOK:false, use:'只拍外觀或校門意象，不進入校園' },
+  bank: { key:'bank', theme:'', taskable:false, landmarkOK:false, use:'只作方向地標或安全參照點' },
+  entertainment: { key:'cinema', theme:'城市色彩', taskable:true, landmarkOK:true, use:'觀察招牌、燈光與外觀色彩' },
+  food: { key:'restaurant', theme:'城市色彩', taskable:true, landmarkOK:false, use:'觀察招牌設計、文字與氣味聯想' },
+  cafe: { key:'cafe', theme:'建築細節', taskable:true, landmarkOK:true, use:'觀察裝潢、窗景與光影' },
+  market: { key:'marketplace', theme:'老街痕跡', taskable:true, landmarkOK:false, use:'觀察生活痕跡與攤位紋理' },
+  shop: { key:'clothes', theme:'建築細節', taskable:true, landmarkOK:false, use:'觀察櫥窗陳設與街面材質' },
+  scenic: { key:'attraction', theme:'全主題', taskable:true, landmarkOK:true, use:'可作未知終點的公開地標' },
+  station: { key:'station', theme:'', taskable:false, landmarkOK:false, use:'只作回程建議或方向參照' },
+  park: { key:'park', theme:'自然縫隙', taskable:true, landmarkOK:true, use:'觀察植物縫隙與自然光影' },
+  convenience: { key:'convenience', theme:'城市色彩', taskable:true, landmarkOK:false, use:'觀察日常招牌、入口與街角動線' },
+  supermarket: { key:'supermarket', theme:'城市色彩', taskable:true, landmarkOK:false, use:'觀察商場入口、標示與人流節奏' },
+  dessert: { key:'restaurant', theme:'城市色彩', taskable:true, landmarkOK:false, use:'觀察甜點店招牌、櫥窗與色彩' },
+  book: { key:'clothes', theme:'建築細節', taskable:true, landmarkOK:false, use:'觀察門面、窗景與街區安靜角落' },
+  night: { key:'marketplace', theme:'老街痕跡', taskable:true, landmarkOK:false, use:'觀察攤位紋理與夜間光線' },
+};
+
+function routeRuleForType(type){
+  return ROUTE_RULES[type] || { key:type || 'place', theme:'城市色彩', taskable:true, landmarkOK:false, use:'觀察公開街景與安全可停留位置' };
+}
+
+function matchesFilterType(type, filter){
+  if(filter === 'all') return !['bank','station','school'].includes(type);
+  if(filter === 'food') return type === 'food';
+  return type === filter;
 }
 
 function accessoryFor(location){
@@ -2527,9 +2841,10 @@ function accessoryFor(location){
 
 function toGameLocation(place, index, requestedFilter = 'all'){
   if(!Number.isFinite(place.latitude) || !Number.isFinite(place.longitude) || !place.name) return null;
-  const forcedTypes = new Set(['cafe', 'dessert', 'park', 'scenic', 'night', 'book']);
-  const type = forcedTypes.has(requestedFilter) ? requestedFilter : typeFromPlace(place);
+  const type = typeFromPlace(place);
+  if(!matchesFilterType(type, requestedFilter)) return null;
   const id = String(place.id || `place-${index}`).replace(/[^\w-]/g, '-');
+  const rule = routeRuleForType(type);
   const location = {
     id,
     name: place.name,
@@ -2540,9 +2855,13 @@ function toGameLocation(place, index, requestedFilter = 'all'){
     lng: place.longitude,
     placeId: place.source === 'google' ? place.id : '',
     desc: place.address || `從 ${place.source === 'google' ? 'Google Places' : 'OpenStreetMap'} 取得的附近真實地點。`,
-    gift: '',
-    giftIcon: iconForType(type),
-  };
+	    gift: '',
+	    giftIcon: iconForType(type),
+	    routeRuleKey: rule.key,
+	    routeTheme: rule.theme,
+	    taskable: rule.taskable,
+	    landmarkOK: rule.landmarkOK,
+	  };
   const acc = accessoryFor(location);
   location.gift = acc.name;
   location.giftIcon = acc.icon;
@@ -2571,7 +2890,7 @@ function toast(msg){
 
 /* ================= MAP LIST ================= */
 let currentFilter='all';
-const FILTERS=[['all','全部'],['food','美食'],['cafe','咖啡'],['dessert','甜點'],['park','公園'],['scenic','景點'],['night','夜市'],['book','書店']];
+const FILTERS=[['all','全部'],['food','美食'],['cafe','咖啡'],['dessert','甜點'],['park','公園'],['scenic','景點'],['convenience','便利商店'],['supermarket','超市']];
 function renderFilters(){
   const row=document.getElementById('filterRow');
   row.innerHTML = FILTERS.map(([k,l])=>`<div class="chip ${k===currentFilter?'active':''}" onclick="setFilter('${k}')">${l}</div>`).join('');
@@ -2606,7 +2925,7 @@ function setFilter(k){
 
 function renderList(){
   const list = document.getElementById('locList');
-  const items = LOCATIONS.filter(l=> currentFilter==='all' || l.type===currentFilter || (currentFilter === 'food' && ['food','cafe','dessert','night'].includes(l.type)))
+  const items = LOCATIONS.filter(l=> matchesFilterType(l.type, currentFilter))
                           .slice().sort((a,b)=>a.distSteps-b.distSteps);
   list.innerHTML = items.map(l=>{
     const visited = !!state.visited[l.id];
@@ -2687,10 +3006,14 @@ function finishCheckin(id){
   const acc = accessoryFor(l);
   const firstVisit = !state.visited[id];
   state.visited[id] = {date:new Date().toISOString().slice(0,10)};
-  if(firstVisit && !state.equipped.includes(acc.id)) state.equipped.push(acc.id);
-  state.fragments += 3;
-  if(firstVisit) awardHatchPoints(15, '首次到訪');
-  persistVisitLog();
+	  if(firstVisit && !state.equipped.includes(acc.id)) state.equipped.push(acc.id);
+	  state.fragments += 3;
+	  state.userXp += firstVisit ? 40 : 10;
+	  state.petXp += firstVisit ? 24 : 8;
+	  if(firstVisit) awardHatchPoints(15, '首次到訪');
+	  updateLevels();
+	  persistVisitLog();
+	  persistPetLog();
   recordVisitBackend(l);
   renderTop();
   document.getElementById('sheetContent').innerHTML = `
@@ -2712,10 +3035,11 @@ function finishCheckin(id){
 /* ================= PHOTO / MEMORY COMPOSER ================= */
 function openPhotoStage(id){
   const l = LOCATIONS.find(x=>x.id===id);
+  const petVisual = state.hatched ? pet3DHtml(currentPetSpecies(), false) : eggSVG(120, hatchPercent());
   document.getElementById('sheetContent').innerHTML = `
     <div class="photo-stage" style="background:linear-gradient(160deg, ${l.color}, #A9C6E8 70%);" id="photoStage">
       <div class="stage-tag">${l.name}</div>
-      <div class="pet-on-stage" id="dragPet">${petSVG(120, state.petColor, state.equipped)}</div>
+      <div class="pet-on-stage" id="dragPet">${petVisual}</div>
     </div>
     <div class="photo-caption">拖曳寵物調整位置，捏合可以之後再放大縮小</div>
     <div class="photo-controls">
@@ -2746,6 +3070,10 @@ function makeDraggable(el, bounds){
 }
 function saveMemory(id){
   state.bond = Math.min(100, state.bond+2);
+  state.userXp += 12;
+  state.petXp += 18;
+  updateLevels();
+  persistPetLog();
   renderTop();
   toast('記憶合照已儲存到寵物履歷 📌');
   closeSheet(); renderList();
@@ -2757,17 +3085,27 @@ function hatchPercent(){
 }
 
 function awardHatchPoints(points, reason = '任務'){
-  if(state.hatched) return;
   const gain = Math.max(0, Math.floor(Number(points) || 0));
   if(!gain) return;
+  if(state.hatched){
+    state.petXp += gain * 3;
+    updateLevels();
+    persistPetLog();
+    renderTop();
+    if(document.getElementById('screen-pet')?.classList.contains('active')) renderPet();
+    return;
+  }
   state.hatchPoints = Math.min(state.hatchGoal, state.hatchPoints + gain);
+  state.petXp += gain;
   if(state.hatchPoints >= state.hatchGoal){
     state.hatched = true;
     state.petName = state.petName || state.eggName || '新夥伴';
-    toast(`${state.petName} 孵化了！`);
+    state.petSpecies = state.petSpecies || pickPetSpecies();
+    toast(`${state.petName} 孵化成 ${currentPetSpecies().name}！`);
   } else {
     toast(`${reason}完成，寵物蛋孵化 +${gain}`);
   }
+  updateLevels();
   persistPetLog();
   renderTop();
   if(document.getElementById('screen-pet')?.classList.contains('active')) renderPet();
@@ -2790,14 +3128,18 @@ function renamePetEgg(){
 
 function renderPet(){
   const percent = hatchPercent();
+  const species = currentPetSpecies();
   document.getElementById('petName').textContent = state.hatched ? state.petName : state.eggName;
-  document.getElementById('petHolder').innerHTML = state.hatched ? petSVG(150, state.petColor, state.equipped) : eggSVG(150, percent);
-  document.getElementById('petLevel').textContent = state.hatched ? 'Lv.'+state.level : '孵化中';
-  document.querySelector('#screen-pet .pet-sub').textContent = state.hatched ? '牠會記得和你去過的地方、步數與城市任務。' : '完成任務讓寵物蛋慢慢孵化，孵化後會成為你的城市夥伴。';
+  const holder = document.getElementById('petHolder');
+  holder.classList.toggle('pet3d-ready', state.hatched);
+  holder.innerHTML = state.hatched ? pet3DHtml(species) : eggSVG(150, percent);
+  if(state.hatched) bindPet3DRotation();
+  document.getElementById('petLevel').textContent = state.hatched ? 'Lv.'+state.petLevel : '孵化中';
+  document.querySelector('#screen-pet .pet-sub').textContent = state.hatched ? `${species.name}：${species.trait}` : '完成任務讓寵物蛋慢慢孵化，孵化後會隨機成為開發者設計的 3D 城市夥伴。';
   document.getElementById('petNameEdit').textContent = state.hatched ? '改名' : '命名';
   document.getElementById('hatchBarLabel').textContent = state.hatched ? '已孵化' : `${state.hatchPoints} / ${state.hatchGoal}`;
   document.getElementById('hatchBar').style.width = percent+'%';
-  document.getElementById('hatchHint').textContent = state.hatched ? `${state.petName} 已經孵化，繼續散步可以提升等級與履歷。` : `目前 ${percent}%・完成照片任務、盲盒路線或首次到訪地點可增加孵化進度。`;
+  document.getElementById('hatchHint').textContent = state.hatched ? `${state.petName} 已經孵化，寵物 Lv.${state.petLevel}・繼續散步可以提升等級與履歷。` : `目前 ${percent}%・完成照片任務、盲盒路線或首次到訪地點可增加孵化進度。`;
   document.getElementById('stepBarLabel').textContent = state.steps.toLocaleString()+' / '+state.stepGoal.toLocaleString();
   document.getElementById('stepBar').style.width = Math.min(100, state.steps/state.stepGoal*100)+'%';
   if(stepTracker.enabled) updateStepStatus(`真實步數記錄中・今日 ${state.steps.toLocaleString()} 步`);
@@ -2855,6 +3197,12 @@ function renderBook(){
 
 /* ================= TOP BAR ================= */
 function renderTop(){
+  updateLevels();
+  const displayName = onlineState.user?.displayName || '玩家';
+  const brandName = document.getElementById('brandName');
+  const brandLevel = document.getElementById('brandLevel');
+  if(brandName) brandName.textContent = displayName;
+  if(brandLevel) brandLevel.textContent = `Lv.${state.userLevel}`;
   document.getElementById('topFrag').textContent = state.fragments;
   document.getElementById('topStep').textContent = state.steps.toLocaleString();
   document.getElementById('fragBig').textContent = state.fragments;
@@ -2876,143 +3224,7 @@ function openTopup(){
   `;
   document.getElementById('modalOverlay').classList.add('open');
 }
-let genMode='keep';
-function openGenerate(){
-  genMode='keep';
-  document.getElementById('modalContent').innerHTML = `
-    <h3>生成新寵物</h3>
-    <div class="upload-box"><span class="em">🖼️</span>上傳任何照片，作為新寵物的靈感來源</div>
-    <div class="mode-row">
-      <div class="mode-chip on" id="m-keep" onclick="setGenMode('keep')">保留特徵</div>
-      <div class="mode-chip" id="m-mix" onclick="setGenMode('mix')">奇想融合</div>
-      <div class="mode-chip" id="m-surprise" onclick="setGenMode('surprise')">完全驚喜</div>
-    </div>
-    <div class="reward-row"><div class="reward-chip">花費 💠 100 枚記憶碎片</div></div>
-    <button class="btn btn-primary" onclick="confirmGenerate()">開始生成</button>
-    <button class="btn btn-ghost" onclick="closeModal()">取消</button>
-  `;
-  document.getElementById('modalOverlay').classList.add('open');
-}
-function setGenMode(m){
-  genMode=m;
-  ['keep','mix','surprise'].forEach(k=>document.getElementById('m-'+k).classList.toggle('on', k===m));
-}
-function confirmGenerate(){
-  if(state.fragments<100){ toast('記憶碎片不足，先去探索或儲值吧'); return; }
-  state.fragments-=100;
-  const palette=['#FF8A6B','#63C7B2','#7C9CFF','#FFC857','#E4574B','#4FB0C6'];
-  state.petColor = palette[Math.floor(Math.random()*palette.length)];
-  renderTop();
-  closeModal();
-  toast('新寵物誕生了！去「寵物」頁看看牠 🎉');
-  showTab('pet');
-}
 function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
-
-let uploadedPetSource = null;
-
-function openGenerate(){
-  genMode='keep';
-  uploadedPetSource = null;
-  document.getElementById('modalContent').innerHTML = `
-    <h3>生成新寵物</h3>
-    <div class="upload-box" id="petUploadBox">
-      <input id="petUploadInput" data-testid="pet-upload-input" type="file" accept="image/*" onchange="handlePetUpload(event)">
-      <label class="upload-prompt" for="petUploadInput">
-        <span class="em">🖼️</span>
-        上傳任何照片，作為新寵物的靈感來源
-      </label>
-      <label class="upload-preview" for="petUploadInput">
-        <img id="petUploadPreview" alt="上傳照片預覽">
-        <div class="upload-meta">
-          <span id="petUploadName">尚未選擇照片</span>
-          <i class="upload-color" id="petUploadColor"></i>
-        </div>
-      </label>
-    </div>
-    <div class="mode-row">
-      <div class="mode-chip on" id="m-keep" onclick="setGenMode('keep')">保留特徵</div>
-      <div class="mode-chip" id="m-mix" onclick="setGenMode('mix')">奇想融合</div>
-      <div class="mode-chip" id="m-surprise" onclick="setGenMode('surprise')">完全驚喜</div>
-    </div>
-    <div class="reward-row"><div class="reward-chip">花費 💠 100 枚記憶碎片</div></div>
-    <button class="btn btn-primary" id="generatePetButton" onclick="confirmGenerate()">開始生成</button>
-    <button class="btn btn-ghost" onclick="closeModal()">取消</button>
-  `;
-  document.getElementById('modalOverlay').classList.add('open');
-}
-
-function handlePetUpload(event){
-  const file = event.target.files && event.target.files[0];
-  if(!file) return;
-  if(!file.type.startsWith('image/')){
-    toast('請選擇圖片檔');
-    event.target.value = '';
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    const dataUrl = String(reader.result || '');
-    const preview = document.getElementById('petUploadPreview');
-    preview.onload = () => extractPetImageColor(preview, file.name, dataUrl);
-    preview.src = dataUrl;
-  };
-  reader.onerror = () => toast('讀取照片失敗，請重新選擇');
-  reader.readAsDataURL(file);
-}
-
-function extractPetImageColor(image, fileName, dataUrl){
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  const size = 48;
-  canvas.width = size;
-  canvas.height = size;
-  ctx.drawImage(image, 0, 0, size, size);
-  const pixels = ctx.getImageData(0, 0, size, size).data;
-  let r = 0, g = 0, b = 0, count = 0;
-  for(let i = 0; i < pixels.length; i += 4){
-    const alpha = pixels[i + 3];
-    if(alpha < 120) continue;
-    const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
-    if(brightness < 18) continue;
-    r += pixels[i];
-    g += pixels[i + 1];
-    b += pixels[i + 2];
-    count++;
-  }
-  const color = count ? rgbToHex(Math.round(r / count), Math.round(g / count), Math.round(b / count)) : '#FF8A6B';
-  uploadedPetSource = { fileName, color, dataUrl };
-  document.getElementById('petUploadBox').classList.add('has-image');
-  document.getElementById('petUploadName').textContent = fileName;
-  document.getElementById('petUploadColor').style.background = color;
-}
-
-function rgbToHex(r, g, b){
-  return '#' + [r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('').toUpperCase();
-}
-
-function confirmGenerate(){
-  if(!uploadedPetSource){
-    toast('請先上傳一張照片');
-    return;
-  }
-  if(state.fragments<100){
-    toast('記憶碎片不足，先去探索或取得更多碎片');
-    return;
-  }
-  state.fragments-=100;
-  state.petColor = uploadedPetSource.color;
-  const generatedName = uploadedPetSource.fileName.replace(/\.[^.]+$/, '').slice(0, 8) || '新寵物';
-  state.petName = generatedName;
-  state.eggName = state.eggName || generatedName;
-  state.hatchPoints = state.hatchGoal;
-  state.hatched = true;
-  persistPetLog();
-  renderTop();
-  closeModal();
-  toast('已依照片主色生成新寵物');
-  showTab('pet');
-}
 
 /* ================= INIT ================= */
 renderFilters();
@@ -3102,7 +3314,7 @@ if(!configured){
     ...patch,
   });
 
-  async function ensureUser(user){
+	  async function ensureUser(user){
     const userRef = ref(db, `users/${user.uid}`);
     const snap = await get(userRef);
     const existing = snap.val() || {};
@@ -3117,8 +3329,29 @@ if(!configured){
       friendCode,
       lastSeenAt: Date.now(),
     });
-    return { ...existing, uid: user.uid, displayName, photoURL, friendCode };
-  }
+	    return { ...existing, uid: user.uid, displayName, photoURL, friendCode };
+	  }
+
+	  function partyInviteUpdates(partyId, inviteUids, partyData){
+	    const friends = onlineState.friends || [];
+	    const members = new Set(Object.keys(onlineState.party?.members || partyData?.members || {}));
+	    const selected = new Set(Array.isArray(inviteUids) ? inviteUids : []);
+	    const displayName = onlineState.user?.displayName || currentUser?.displayName || '玩家';
+	    const photoURL = avatarUrl(onlineState.user) || '';
+	    const inviteFriends = friends.filter((friend) => friend.uid && selected.has(friend.uid) && !members.has(friend.uid));
+	    const updates = {};
+	    inviteFriends.forEach((friend) => {
+	      updates[`partyInvites/${friend.uid}/${partyId}`] = {
+	        partyId,
+	        hostUid: partyData?.hostUid || currentUser.uid,
+	        hostName: partyData?.hostName || displayName,
+	        hostPhotoURL: partyData?.hostPhotoURL || photoURL,
+	        goal: partyData?.goal || '一起散步',
+	        createdAt: Date.now(),
+	      };
+	    });
+	    return { updates, inviteFriends };
+	  }
 
   function clearFriendDetailListeners(){
     friendDetailUnsubs.forEach((unsub) => unsub());
@@ -3613,43 +3846,56 @@ if(!configured){
         const partyId = currentUser.uid;
         const displayName = onlineState.user?.displayName || currentUser.displayName || '玩家';
         const photoURL = avatarUrl(onlineState.user) || '';
-        const friends = onlineState.friends || [];
-        const selected = new Set(Array.isArray(inviteUids) ? inviteUids : []);
-        const inviteFriends = selected.size ? friends.filter((friend) => selected.has(friend.uid)) : [];
-        const data = {
-          id: partyId,
-          hostUid: currentUser.uid,
-          hostName: displayName,
-          goal: '一起散步',
-          startedAt: Date.now(),
-          members: {
-            [currentUser.uid]: { uid: currentUser.uid, displayName, photoURL, joinedAt: Date.now() },
-          },
-        };
-        const updates = {
-          [`parties/${partyId}`]: data,
-          [`userParties/${currentUser.uid}`]: { partyId, role: 'host', joinedAt: Date.now() },
-        };
-        inviteFriends.forEach((friend) => {
-          if(friend.uid){
-            updates[`partyInvites/${friend.uid}/${partyId}`] = {
-              partyId,
-              hostUid: currentUser.uid,
-              hostName: displayName,
-              hostPhotoURL: photoURL,
-              goal: data.goal,
-              createdAt: Date.now(),
-            };
-          }
-        });
-        await update(ref(db), updates);
-        emit({ party: data });
-        window.toast?.(inviteFriends.length ? `散步小隊已建立，已邀請 ${inviteFriends.length} 位好友` : '散步小隊已建立，尚未邀請好友');
-      } catch (error) {
-        window.toast?.(`建立小隊失敗：${firebaseMessage(error)}`);
-      }
-    },
-    async joinParty(partyId){
+	        const data = {
+	          id: partyId,
+	          hostUid: currentUser.uid,
+	          hostName: displayName,
+	          hostPhotoURL: photoURL,
+	          goal: '一起散步',
+	          startedAt: Date.now(),
+	          members: {
+	            [currentUser.uid]: { uid: currentUser.uid, displayName, photoURL, joinedAt: Date.now() },
+	          },
+	        };
+	        const updates = {
+	          [`parties/${partyId}`]: data,
+	          [`userParties/${currentUser.uid}`]: { partyId, role: 'host', joinedAt: Date.now() },
+	        };
+	        const { updates: inviteUpdates, inviteFriends } = partyInviteUpdates(partyId, inviteUids, data);
+	        Object.assign(updates, inviteUpdates);
+	        await update(ref(db), updates);
+	        emit({ party: data });
+	        window.toast?.(inviteFriends.length ? `散步小隊已建立，已邀請 ${inviteFriends.length} 位好友` : '散步小隊已建立，尚未邀請好友');
+	      } catch (error) {
+	        window.toast?.(`建立小隊失敗：${firebaseMessage(error)}`);
+	      }
+	    },
+	    async inviteToParty(inviteUids = []){
+	      if(!currentUser) return window.toast?.('請先登入');
+	      try {
+	        const partyId = activePartyId || onlineState.party?.id || currentUser.uid;
+	        const partySnap = await get(ref(db, `parties/${partyId}`));
+	        const partyData = partySnap.val() || onlineState.party;
+	        if(!partyData){
+	          window.toast?.('目前沒有可邀請好友的小隊');
+	          return;
+	        }
+	        if(partyData.hostUid !== currentUser.uid){
+	          window.toast?.('只有小隊建立人可以追加邀請');
+	          return;
+	        }
+	        const { updates, inviteFriends } = partyInviteUpdates(partyId, inviteUids, partyData);
+	        if(!inviteFriends.length){
+	          window.toast?.('沒有可追加邀請的好友');
+	          return;
+	        }
+	        await update(ref(db), updates);
+	        window.toast?.(`已邀請 ${inviteFriends.length} 位好友加入小隊`);
+	      } catch (error) {
+	        window.toast?.(`邀請好友失敗：${firebaseMessage(error)}`);
+	      }
+	    },
+	    async joinParty(partyId){
       if(!currentUser) return window.toast?.('請先登入');
       const targetPartyId = String(partyId || '').trim();
       if(!targetPartyId) return window.toast?.('找不到小隊邀請');
@@ -3669,10 +3915,23 @@ if(!configured){
         });
         window.toast?.('已加入散步小隊');
       } catch (error) {
-        window.toast?.(`加入小隊失敗：${firebaseMessage(error)}`);
-      }
-    },
-    async leaveParty(){
+	        window.toast?.(`加入小隊失敗：${firebaseMessage(error)}`);
+	      }
+	    },
+	    async declineParty(partyId){
+	      if(!currentUser) return window.toast?.('請先登入');
+	      const targetPartyId = String(partyId || '').trim();
+	      if(!targetPartyId) return window.toast?.('找不到小隊邀請');
+	      try {
+	        await update(ref(db), {
+	          [`partyInvites/${currentUser.uid}/${targetPartyId}`]: null,
+	        });
+	        window.toast?.('已拒絕小隊邀請');
+	      } catch (error) {
+	        window.toast?.(`拒絕邀請失敗：${firebaseMessage(error)}`);
+	      }
+	    },
+	    async leaveParty(){
       if(!currentUser) return;
       try {
         const partyId = activePartyId || onlineState.party?.id || currentUser.uid;

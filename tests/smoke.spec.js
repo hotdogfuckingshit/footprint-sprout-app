@@ -90,8 +90,8 @@ test('map category changes keep the list scroll position visible', async ({ page
       ['dessert', '甜點', 'bakery'],
       ['park', '公園', 'park'],
       ['scenic', '景點', 'tourist_attraction'],
-      ['night', '夜市', 'restaurant'],
-      ['book', '書店', 'book_store'],
+      ['convenience', '便利商店', 'convenience_store'],
+      ['supermarket', '超市', 'supermarket'],
     ];
     window.renderMapMarkers = () => {
       screen.scrollTop = 0;
@@ -137,39 +137,28 @@ test('map category changes keep the list scroll position visible', async ({ page
   }
 });
 
-test('pet generator requires and accepts an uploaded image', async ({ page }) => {
+test('pet hatches into a rotatable 3D developer-designed species and upload generator is removed', async ({ page }) => {
   await page.goto('http://localhost:5173');
   await page.locator('.navbtn[data-tab="me"]').click();
-  await page.locator('.gen-btn').click();
-
-  await expect(page.locator('#modalOverlay.open')).toBeVisible();
-  await expect(page.getByTestId('pet-upload-input')).toHaveAttribute('type', 'file');
-
-  await page.locator('#generatePetButton').click();
-  await expect(page.locator('#toast')).toContainText('請先上傳一張照片');
-
-  await page.getByTestId('pet-upload-input').setInputFiles({
-    name: 'pet-source.png',
-    mimeType: 'image/png',
-    buffer: Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGP8//8/AwwwMDAwMDAAAAwgAQcD7E9RAAAAAElFTkSuQmCC',
-      'base64',
-    ),
-  });
-  await expect(page.locator('#petUploadBox')).toHaveClass(/has-image/);
-  await expect(page.locator('#petUploadPreview')).toBeVisible();
-  await expect(page.locator('#petUploadName')).toContainText('pet-source.png');
+  await expect(page.locator('.gen-btn')).toHaveCount(0);
+  await expect(page.getByTestId('pet-upload-input')).toHaveCount(0);
 
   await page.evaluate(() => {
-    state.fragments = 142;
-    renderTop();
+    state.hatchPoints = 95;
+    awardHatchPoints(5, 'test');
   });
-  await page.locator('#generatePetButton').click();
+  await page.locator('.navbtn[data-tab="pet"]').click();
   await expect(page.locator('#screen-pet')).toHaveClass(/active/);
-  await expect(page.locator('#petHolder svg')).toBeVisible();
+  await expect(page.getByTestId('pet-3d-model')).toBeVisible();
   await expect(page.locator('#petLevel')).not.toHaveText('孵化中');
   await expect(page.locator('#hatchBarLabel')).toHaveText('已孵化');
-  await expect(page.locator('#topFrag')).toHaveText('42');
+  const before = await page.getByTestId('pet-3d-model').evaluate((el) => getComputedStyle(el).getPropertyValue('--pet-rot-y'));
+  await page.getByTestId('pet-3d-model').dragTo(page.getByTestId('pet-3d-model'), {
+    sourcePosition: { x: 38, y: 38 },
+    targetPosition: { x: 118, y: 38 },
+  });
+  const after = await page.getByTestId('pet-3d-model').evaluate((el) => getComputedStyle(el).getPropertyValue('--pet-rot-y'));
+  expect(after).not.toBe(before);
 });
 
 test('step counter starts from real daily steps and ignores demo rewards', async ({ page }) => {
@@ -284,6 +273,8 @@ test('blind quest can be completed and creates weekly review', async ({ page }) 
   await page.goto('http://localhost:5173');
 
   await page.getByRole('button', { name: '開始盲盒路線' }).click();
+  await page.getByRole('button', { name: '安全略過' }).click();
+  await page.getByRole('button', { name: '解鎖下一段線索' }).click();
   await page.getByRole('button', { name: '安全略過' }).click();
   await page.getByRole('button', { name: '解鎖下一段線索' }).click();
   await page.getByRole('button', { name: '安全略過' }).click();
@@ -612,6 +603,9 @@ test('friend code input is readable on mobile and party invite can be accepted',
           },
         });
       },
+      declineParty(partyId) {
+        window.declinedParty = partyId;
+      },
     };
     window.receiveOnlineSnapshot({
       configured: true,
@@ -644,8 +638,10 @@ test('friend code input is readable on mobile and party invite can be accepted',
   expect(inputMetrics.width).toBeGreaterThan(170);
   expect(inputMetrics.fontSize).toBeGreaterThanOrEqual(16);
 
-  await expect(page.locator('#partyStatus')).toContainText('好友A 邀請你散步');
-  await page.locator('#partyStatus button').click();
+  await expect(page.locator('#partyInvitesList')).toContainText('好友A 邀請你散步');
+  await page.locator('#partyInvitesList button').filter({ hasText: '拒絕' }).click();
+  await expect.poll(() => page.evaluate(() => window.declinedParty)).toBe('party-1');
+  await page.locator('#partyInvitesList button').filter({ hasText: '加入' }).click();
   await expect(page.locator('#partyStatus')).toContainText('小隊進行中');
   await expect(page.locator('#partyStatus')).toContainText('城市玩家');
   await expect.poll(() => page.evaluate(() => window.joinedParty)).toBe('party-1');
@@ -770,6 +766,9 @@ test('walk party creation sends invites only to checked friends and does not ove
       createParty(inviteUids) {
         window.createdInvites = inviteUids;
       },
+      inviteToParty(inviteUids) {
+        window.addedInvites = inviteUids;
+      },
     };
     window.receiveOnlineSnapshot({
       configured: true,
@@ -810,9 +809,27 @@ test('walk party creation sends invites only to checked friends and does not ove
     });
   });
 
-  await page.getByRole('button', { name: '建立小隊' }).click();
-  await expect(page.locator('#toast')).toContainText('你已在小隊中');
+  await page.getByRole('button', { name: '邀請好友' }).click();
+  await expect(page.locator('#toast')).toContainText('只有小隊建立人');
   await expect.poll(() => page.evaluate(() => window.createdInvites)).toBeNull();
+
+  await page.evaluate(() => {
+    window.receiveOnlineSnapshot({
+      party: {
+        id: 'existing-party',
+        hostUid: 'me',
+        goal: '一起散步',
+        members: {
+          me: { displayName: '城市玩家' },
+          'friend-a': { displayName: '好友A' },
+        },
+      },
+    });
+  });
+  await expect(page.locator('#partyInvitePicker')).toContainText('追加邀請好友');
+  await page.locator('#partyInvitePicker input').first().check();
+  await page.getByRole('button', { name: '邀請好友' }).click();
+  await expect.poll(() => page.evaluate(() => window.addedInvites)).toEqual(['friend-b']);
 });
 
 test('map double click enters fullscreen and does not exit while zooming', async ({ page }) => {
