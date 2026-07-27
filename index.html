@@ -146,7 +146,8 @@ body{
 .quest-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0;}
 .quest-field{background:#F8FCFF; border:1px solid var(--line); border-radius:14px; padding:10px;}
 .quest-field label{display:block; font-size:10.5px; font-weight:900; color:var(--ink-soft); margin-bottom:5px;}
-.quest-field select{width:100%; border:0; background:transparent; color:var(--ink); font:inherit; font-size:13px; font-weight:900; outline:none;}
+.quest-field select,.quest-field input{width:100%; border:0; background:transparent; color:var(--ink); font:inherit; font-size:13px; font-weight:900; outline:none;}
+.quest-fixed-value{font-size:13px; font-weight:900; color:var(--ink); line-height:1.4;}
 .quest-route-secret{background:linear-gradient(135deg,#FFF7D8,#EAFBF3); border-radius:16px; padding:12px; margin:10px 0; border:1px solid #E8F1D1;}
 .quest-route-secret strong{display:block; font-size:14px; color:var(--ink); margin-bottom:4px;}
 .quest-progress{height:8px; background:var(--sky); border-radius:999px; overflow:hidden; margin:10px 0;}
@@ -363,6 +364,7 @@ body{
 .gallery-summary .lab{font-size:11px; opacity:.9; font-weight:700;}
 .gallery-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:12px 16px;}
 .gcard{background:var(--paper); border-radius:18px; padding:10px 6px; text-align:center; box-shadow:var(--shadow); position:relative;}
+.gcard:not(.locked){cursor:pointer;}
 .gcard .ic{font-size:26px; margin-bottom:4px;}
 .gcard.locked .ic{filter:grayscale(1) opacity(.4);}
 .gcard .nm{font-size:10.5px; font-weight:800; color:var(--ink); line-height:1.3;}
@@ -444,6 +446,11 @@ body{
 .source-item .r{color:var(--leaf-dark); font-weight:800;}
 .principle{margin:6px 16px 20px; text-align:center; font-size:12px; color:var(--ink-soft); line-height:1.7; padding:0 10px;}
 .principle b{color:var(--ink);}
+.book-city-list{display:grid; gap:9px; margin-top:12px;}
+.book-place-row{display:grid; grid-template-columns:48px minmax(0,1fr); gap:10px; align-items:center; background:#F8FCFF; border:1px solid var(--line); border-radius:16px; padding:9px;}
+.book-place-icon{width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:22px;}
+.book-place-name{font-size:14px; font-weight:900; color:var(--ink); line-height:1.3;}
+.book-place-meta{font-size:11px; color:var(--ink-soft); margin-top:3px; line-height:1.45;}
 
 /* online */
 .online-hero{margin:8px 16px 12px; background:linear-gradient(135deg,#145D4A,#17A673); color:#fff; border-radius:22px; padding:18px; box-shadow:var(--shadow);}
@@ -1284,8 +1291,9 @@ let questState = {
   active: false,
   completed: false,
   selectedTime: QUEST_OPTIONS.times[0],
+  customMinutes: 40,
   selectedTheme: QUEST_OPTIONS.themes[0],
-  selectedPace: QUEST_OPTIONS.paces[0],
+  selectedPace: '一般步行',
   startedAt: null,
   startedSteps: 0,
   timeLimitMin: 40,
@@ -1323,7 +1331,15 @@ function recomputeDistances(){
 }
 recomputeDistances();
 
+function clampQuestMinutes(value){
+  const minutes = Math.floor(Number(value) || 40);
+  return Math.max(10, Math.min(360, minutes));
+}
+
 function minutesForQuest(label){
+  if(Number.isFinite(Number(label))) return clampQuestMinutes(label);
+  const numeric = String(label || '').match(/\d+/)?.[0];
+  if(numeric) return clampQuestMinutes(numeric);
   if(label === '1 小時') return 60;
   if(label === '2 小時') return 120;
   if(label === '1 天') return 360;
@@ -1396,9 +1412,9 @@ function renderQuestGuide(guide, activeLocation){
 }
 
 function pickQuestRoute(){
-  const minutes = minutesForQuest(questState.selectedTime);
+  const minutes = minutesForQuest(questState.customMinutes || questState.selectedTime);
   const count = Math.min(routeSizeForQuest(minutes), LOCATIONS.length);
-  const radiusKm = maxQuestRadiusKm(minutes, questState.selectedPace);
+  const radiusKm = maxQuestRadiusKm(minutes);
   const theme = questState.selectedTheme;
   const candidates = LOCATIONS
     .map(normalizeLocationRule)
@@ -1423,9 +1439,9 @@ function pickQuestRoute(){
   return route;
 }
 
-function maxQuestRadiusKm(minutes, pace){
+function maxQuestRadiusKm(minutes){
   const travelBudgetMin = minutes * 0.5;
-  const walkSpeedKmH = pace === '慢慢走' ? 3.2 : pace === '避開階梯' ? 3.6 : 4.5;
+  const walkSpeedKmH = 4.5;
   return Math.max(0.6, (travelBudgetMin / 60) * walkSpeedKmH);
 }
 
@@ -1466,13 +1482,13 @@ function renderQuest(){
         <div>
           <div class="quest-kicker">空堂盲盒探索</div>
           <h2>不先告訴你終點，只給下一段線索</h2>
-          <p>依可用時間、主題與行動條件產生步行探索。照片任務通過後才解鎖下一段。</p>
+          <p>依自訂時間與主題產生一般步行探索。照片任務通過後才解鎖下一段。</p>
         </div>
         <span class="quest-status">MVP</span>
       </div>
       <div class="quest-grid">
-        <div class="quest-field"><label>可用時間</label><select id="questTime">${QUEST_OPTIONS.times.map((v)=>`<option ${v===questState.selectedTime?'selected':''}>${v}</option>`).join('')}</select></div>
-        <div class="quest-field"><label>行動條件</label><select id="questPace">${QUEST_OPTIONS.paces.map((v)=>`<option ${v===questState.selectedPace?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="quest-field"><label>可用時間（分鐘）</label><input id="questMinutes" type="number" inputmode="numeric" min="10" max="360" step="5" value="${questState.customMinutes}"></div>
+        <div class="quest-field"><label>行動條件</label><div class="quest-fixed-value">一般步行</div></div>
         <div class="quest-field" style="grid-column:1 / -1;"><label>探索主題</label><select id="questTheme">${QUEST_OPTIONS.themes.map((v)=>`<option ${v===questState.selectedTheme?'selected':''}>${v}</option>`).join('')}</select></div>
       </div>
       <button class="btn btn-primary" onclick="startBlindQuest()">開始盲盒路線</button>
@@ -1551,10 +1567,11 @@ function renderQuestValidation(){
 }
 
 function startBlindQuest(){
-  questState.selectedTime = document.getElementById('questTime')?.value || questState.selectedTime;
+  questState.customMinutes = clampQuestMinutes(document.getElementById('questMinutes')?.value || questState.customMinutes);
+  questState.selectedTime = `${questState.customMinutes} 分鐘`;
   questState.selectedTheme = document.getElementById('questTheme')?.value || questState.selectedTheme;
-  questState.selectedPace = document.getElementById('questPace')?.value || questState.selectedPace;
-  questState.timeLimitMin = minutesForQuest(questState.selectedTime);
+  questState.selectedPace = '一般步行';
+  questState.timeLimitMin = questState.customMinutes;
   questState.route = pickQuestRoute();
   questState.active = true;
   questState.completed = false;
@@ -3786,6 +3803,12 @@ function finishCheckin(id, proof = {}){
 	  state.visited[id] = {
 	    date:new Date().toISOString().slice(0,10),
 	    city: cityForLocation(l),
+	    name: l?.name || id,
+	    tag: l?.tag || tagForType(l?.type || 'scenic'),
+	    type: l?.type || 'scenic',
+	    color: l?.color || '#EAF6FF',
+	    lat: l?.lat ?? null,
+	    lng: l?.lng ?? null,
 	    distanceM: Math.round(Number(proof.distance || 0)),
 	  };
 	  state.userXp += firstVisit ? 40 : 10;
@@ -3940,17 +3963,19 @@ function renderBook(){
   Object.entries(state.visited || {}).forEach(([id, visit]) => {
     const loc = LOCATIONS.find((item) => item.id === id);
     const city = visit?.city || cityForLocation(loc);
-    if(!byCity[city]) byCity[city] = { city, count:0, types:new Set(), latest:'' };
+    if(!byCity[city]) byCity[city] = { city, count:0, types:new Set(), latest:'', places:[] };
     byCity[city].count += 1;
-    if(loc?.type) byCity[city].types.add(tagForType(loc.type));
-    byCity[city].latest = loc?.name || byCity[city].latest;
+    const type = loc?.type || visit?.type;
+    if(type) byCity[city].types.add(tagForType(type));
+    byCity[city].latest = loc?.name || visit?.name || byCity[city].latest;
+    byCity[city].places.push({ id, visit, loc });
   });
   const cities = Object.values(byCity);
   if(!cities.length){
     grid.innerHTML = `<div class="gcard locked" style="grid-column:1 / -1;"><div class="lock">🔒</div><div class="ic">📖</div><div class="nm">尚未解鎖縣市圖鑑</div><div class="from">到現場完成一次認證後開啟</div></div>`;
   } else {
     grid.innerHTML = cities.map((entry)=>`
-      <div class="gcard">
+      <div class="gcard" onclick="openCityBook('${encodeURIComponent(entry.city)}')">
         <div class="lock"></div>
         <div class="ic">📍</div>
         <div class="nm">${entry.city}</div>
@@ -3959,6 +3984,49 @@ function renderBook(){
     `).join('');
   }
   document.getElementById('galN').textContent = String(cities.length);
+}
+
+function visitedPlacesForCity(city){
+  return Object.entries(state.visited || {})
+    .map(([id, visit]) => {
+      const loc = LOCATIONS.find((item) => item.id === id);
+      const placeCity = visit?.city || cityForLocation(loc);
+      return placeCity === city ? { id, visit, loc } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => String(b.visit?.date || '').localeCompare(String(a.visit?.date || '')));
+}
+
+function openCityBook(encodedCity){
+  const city = decodeURIComponent(encodedCity || '');
+  const places = visitedPlacesForCity(city);
+  const sheetContent = document.getElementById('sheetContent');
+  const overlay = document.getElementById('sheetOverlay');
+  const sheet = document.getElementById('sheet');
+  if(!sheetContent || !overlay || !sheet) return;
+  sheetContent.innerHTML = `
+    <div class="sheet-head">
+      <div>
+        <span class="tag">縣市圖鑑</span>
+        <h2>${escapeHtml(city || '目前城市')}</h2>
+        <p>已探索 ${places.length} 個地點；只有實際到訪認證後才會寫入。</p>
+      </div>
+    </div>
+    <div class="book-city-list">
+      ${places.length ? places.map(({id, visit, loc}) => `
+        <div class="book-place-row">
+          <div class="book-place-icon" style="background:${escapeHtml(loc?.color || visit?.color || '#EAF6FF')}">${iconForType(loc?.type || visit?.type || 'scenic')}</div>
+          <div>
+            <div class="book-place-name">${escapeHtml(loc?.name || visit?.name || id)}</div>
+            <div class="book-place-meta">${escapeHtml(loc?.tag || visit?.tag || tagForType(loc?.type || visit?.type || 'scenic'))}・${escapeHtml(visit?.date || '未知日期')}</div>
+          </div>
+        </div>
+      `).join('') : '<div class="empty-online">這個城市還沒有到訪紀錄。</div>'}
+    </div>
+    <button class="btn btn-ghost" onclick="closeSheet()">關閉</button>
+  `;
+  overlay.classList.add('open');
+  sheet.classList.add('open');
 }
 
 /* ================= TOP BAR ================= */
@@ -4339,6 +4407,13 @@ if(!configured){
         state.visited[id] = {
           date: visit?.date || todayKey(new Date(Number(visit?.visitedAt || Date.now()))),
           city: visit?.city || cityForLocation(loc),
+          name: visit?.name || loc?.name || id,
+          tag: visit?.tag || loc?.tag || tagForType(loc?.type || 'scenic'),
+          type: visit?.type || loc?.type || 'scenic',
+          color: visit?.color || loc?.color || '#EAF6FF',
+          lat: visit?.lat ?? loc?.lat ?? null,
+          lng: visit?.lng ?? loc?.lng ?? null,
+          distanceM: Math.round(Number(visit?.distanceM || 0)),
         };
       });
       persistVisitLog();

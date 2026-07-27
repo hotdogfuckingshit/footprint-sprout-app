@@ -474,30 +474,45 @@ test('check-in cannot be completed without verified location proof', async ({ pa
 test('collection groups progress by city instead of individual places', async ({ page }) => {
   await page.goto('http://localhost:5173');
   const result = await page.evaluate(() => {
+    const first = LOCATIONS[0];
+    const second = LOCATIONS[1];
     state.visited = {
-      [LOCATIONS[0].id]: { date: '2026-07-28', city: '台中市' },
-      [LOCATIONS[1].id]: { date: '2026-07-28', city: '台中市' },
+      [first.id]: { date: '2026-07-28', city: 'Taichung Test', name: first.name, tag: first.tag, type: first.type, color: first.color },
+      [second.id]: { date: '2026-07-28', city: 'Taichung Test', name: second.name, tag: second.tag, type: second.type, color: second.color },
     };
     renderBook();
     return {
       cardCount: document.querySelectorAll('#galGrid .gcard').length,
       number: document.getElementById('galN').textContent,
       text: document.getElementById('galGrid').textContent,
+      names: [LOCATIONS[0].name, LOCATIONS[1].name],
     };
   });
 
   expect(result.cardCount).toBe(1);
   expect(result.number).toBe('1');
-  expect(result.text).toContain('台中市');
+  expect(result.text).toContain('Taichung Test');
+
+  await page.locator('.navbtn[data-tab="book"]').click();
+  await page.locator('#galGrid .gcard').first().click();
+  await expect(page.locator('#sheetOverlay')).toHaveClass(/open/);
+  await expect(page.locator('#sheetContent')).toContainText('Taichung Test');
+  await expect(page.locator('.book-place-row')).toHaveCount(2);
+  await expect(page.locator('#sheetContent')).toContainText(result.names[0]);
+  await expect(page.locator('#sheetContent')).toContainText(result.names[1]);
 });
 
 test('blind quest planner starts hidden route and validates a city photo', async ({ page }) => {
   await page.goto('http://localhost:5173');
 
   await expect(page.locator('#questCard')).toContainText('空堂盲盒探索');
-  await page.locator('#questTime').selectOption('40 分鐘');
+  await expect(page.locator('#questPace')).toHaveCount(0);
+  await page.locator('#questMinutes').fill('55');
   await page.locator('#questTheme').selectOption('城市色彩');
   await page.getByRole('button', { name: '開始盲盒路線' }).click();
+
+  await expect.poll(() => page.evaluate(() => questState.timeLimitMin)).toBe(55);
+  await expect.poll(() => page.evaluate(() => questState.selectedPace)).toBe('一般步行');
 
   await expect(page.locator('#questCard')).toContainText('盲盒路線進行中');
   await expect(page.locator('#questCard')).toContainText('方向');
@@ -1268,14 +1283,14 @@ test('map double click enters fullscreen and does not exit while zooming', async
   await expect(page.locator('.map-friends-btn')).toBeVisible();
   await expect(page.locator('.map-recenter-btn')).toBeVisible();
   await expect(page.locator('.locate-btn')).toBeVisible();
-  await page.locator('#mapWrap').dblclick();
+  await page.evaluate(() => document.getElementById('mapWrap').dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await page.locator('#mapWrap').click({ position: { x: 250, y: 250 } });
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await expect(page.locator('#mapExitZone')).toHaveClass(/active/);
   await page.locator('#mapExitZone').click();
   await expect(page.locator('#mapWrap')).not.toHaveClass(/map-fullscreen/);
-  await page.locator('#mapWrap').dblclick();
+  await page.evaluate(() => document.getElementById('mapWrap').dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
   await expect(page.locator('#mapWrap')).toHaveClass(/map-fullscreen/);
   await page.locator('.map-exit-btn').click();
   await expect(page.locator('#mapWrap')).not.toHaveClass(/map-fullscreen/);
