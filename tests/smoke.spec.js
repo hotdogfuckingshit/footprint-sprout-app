@@ -685,7 +685,7 @@ test('profile tab prompts before login and lets signed-in users change display n
   await page.locator('.navbtn[data-tab="me"]').click();
 
   await expect(page.locator('#profileName')).toHaveText('請先登入');
-  await expect(page.locator('#profileMeta')).toContainText('登入後');
+  await expect(page.locator('#profileMeta')).toContainText('玩家 Lv.1');
   await expect(page.locator('#profileEdit')).toContainText('前往登入');
 
   await page.evaluate(() => {
@@ -1505,4 +1505,93 @@ test('exiting fullscreen restores normal local map zoom', async ({ page }) => {
 
   expect(result.lastZoom).toBe(14);
   expect(result.lastCenter).toEqual({ lat: 24.1815, lng: 120.6449 });
+});
+
+test('profile character customization persists and is included in public status', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="me"]').click();
+
+  await expect(page.locator('#profileHome .character-scene')).toBeVisible();
+  await expect(page.locator('#profileEdit .character-option')).toHaveCount(14);
+
+  const result = await page.evaluate(() => {
+    window.statusPayloads = [];
+    window.FootprintOnline = {
+      updateStatus(payload) {
+        window.statusPayloads.push(payload);
+      },
+    };
+    setCharacterOption('gender', 'female');
+    setCharacterOption('hair', 'bob');
+    setCharacterOption('eyes', 'large');
+    setCharacterOption('brow', 'long');
+    setCharacterOption('outfit', 'jacket');
+    return {
+      character: state.character,
+      stored: JSON.parse(localStorage.getItem('footprintPetLog:v1')).character,
+      publicCharacter: publicStatusPayload().character,
+    };
+  });
+
+  expect(result.character).toEqual({
+    gender: 'female',
+    hair: 'bob',
+    eyes: 'large',
+    brow: 'long',
+    outfit: 'jacket',
+  });
+  expect(result.stored).toEqual(result.character);
+  expect(result.publicCharacter).toEqual(result.character);
+  await expect(page.locator('#profileHome .character-figure')).toHaveClass(/gender-female/);
+  await expect(page.locator('#profileHome .character-figure')).toHaveClass(/outfit-jacket/);
+});
+
+test('friend distance card opens a friend profile before map focus', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="online"]').click();
+
+  await page.evaluate(() => {
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: {
+        uid: 'test-user',
+        displayName: 'Player',
+        email: 'test@example.com',
+      },
+      friendCode: 'ABC12345',
+      myLocation: { lat: 24.1815, lng: 120.6449, updatedAt: Date.now() },
+      sharing: true,
+      shareTargetUids: ['friend-j'],
+      friends: [
+        {
+          uid: 'friend-j',
+          displayName: 'JIAN',
+          photoURL: '',
+          userLevel: 8,
+          userXp: 1280,
+          todaySteps: 4321,
+          hatched: true,
+          petName: 'Kumo',
+          petLevel: 4,
+          petSpecies: 'polyfox',
+          petEvolutionStage: 2,
+          character: { gender: 'female', hair: 'cap', eyes: 'small', brow: 'short', outfit: 'hoodie' },
+          location: { lat: 35.6812, lng: 139.7671, accuracy: 32, updatedAt: Date.now() },
+        },
+      ],
+      party: null,
+      partyInvites: [],
+    });
+  });
+
+  await page.locator('#friendList .friend-card').first().click();
+  await expect(page.locator('#sheetOverlay')).toHaveClass(/open/);
+  await expect(page.locator('.friend-profile-sheet')).toBeVisible();
+  await expect(page.locator('.friend-profile-sheet')).toContainText('JIAN');
+  await expect(page.locator('.friend-profile-sheet')).toContainText('玩家 Lv.8');
+  await expect(page.locator('.friend-profile-sheet')).toContainText('Kumo Lv.4');
+  await expect(page.locator('.friend-profile-sheet')).toContainText('35.68120, 139.76710');
+  await expect(page.locator('.friend-profile-sheet .character-figure')).toHaveClass(/gender-female/);
+  await expect(page.locator('.friend-profile-actions .btn-primary')).toBeEnabled();
 });

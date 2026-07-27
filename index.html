@@ -382,6 +382,57 @@ body{
 .avatar-upload-btn{position:relative; display:flex; align-items:center; justify-content:center; min-height:46px; border:1px dashed #B9D6E5; border-radius:14px; background:#EEF8FF; color:var(--ink); font-weight:900; font-size:14px; cursor:pointer;}
 .avatar-upload-btn input{position:absolute; inset:0; opacity:0; cursor:pointer;}
 .profile-login-note{margin-top:12px; color:var(--ink-soft); font-size:12.5px; line-height:1.6;}
+.profile-home{margin:10px 16px; background:var(--paper); border-radius:24px; padding:16px; box-shadow:var(--shadow);}
+.profile-showcase{display:grid; grid-template-columns:120px minmax(0,1fr); gap:14px; align-items:center;}
+.profile-stats{display:grid; gap:8px;}
+.profile-stat{background:#F8FCFF; border:1px solid var(--line); border-radius:15px; padding:9px 10px; font-size:11px; color:var(--ink-soft);}
+.profile-stat b{display:block; color:var(--ink); font-size:14px; margin-bottom:2px;}
+.profile-pet-preview{margin-top:12px; background:linear-gradient(180deg,#FFF7E0,#F8FCFF); border-radius:20px; padding:10px 0 8px; min-height:132px; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+.profile-pet-preview .pet3d-model{transform:scale(.72) rotateX(-10deg) rotateY(var(--pet-rot-y, -24deg));}
+.character-scene{height:150px; position:relative; display:flex; align-items:flex-end; justify-content:center; background:linear-gradient(180deg,#EAF6FF,#FFFFFF); border-radius:22px; overflow:hidden;}
+.character-scene.small{height:118px; border-radius:18px;}
+.character-scene:after{content:''; position:absolute; left:24px; right:24px; bottom:12px; height:10px; border-radius:50%; background:rgba(28,37,65,.1);}
+.character-figure{position:relative; width:88px; height:132px; z-index:1;}
+.character-scene.small .character-figure{transform:scale(.78); transform-origin:bottom center;}
+.char-head{position:absolute; left:24px; top:12px; width:42px; height:45px; border-radius:48% 48% 44% 44%; background:#FFD8B8; box-shadow:inset -6px -8px 12px rgba(0,0,0,.08); z-index:4;}
+.char-hair{position:absolute; left:18px; top:5px; width:54px; height:45px; background:#4E342E; z-index:5;}
+.hair-short{border-radius:26px 26px 12px 12px; clip-path:polygon(0 34%,18% 8%,50% 0,82% 8%,100% 34%,90% 62%,68% 42%,46% 58%,28% 42%,8% 62%);}
+.hair-bob{height:60px; border-radius:28px 28px 18px 18px; clip-path:polygon(3% 25%,20% 4%,50% 0,82% 6%,98% 26%,92% 100%,12% 100%);}
+.hair-cap{top:0; height:35px; background:#F4F7FB; border-radius:24px 24px 10px 10px; box-shadow:inset 0 -8px 0 rgba(28,37,65,.08);}
+.hair-cap:after{content:''; position:absolute; left:6px; right:6px; bottom:8px; height:4px; border-radius:99px; background:linear-gradient(90deg,#17A673,#FFC93C,#7C5CFC);}
+.char-face{position:absolute; inset:0; z-index:6;}
+.char-eye{position:absolute; top:23px; width:5px; height:7px; border-radius:50%; background:#1C2541;}
+.char-eye.left{left:12px}.char-eye.right{right:12px}
+.eyes-small .char-eye{width:4px; height:5px; top:25px;}
+.eyes-large .char-eye{width:7px; height:9px; top:22px;}
+.char-brow{position:absolute; top:17px; width:10px; height:2px; border-radius:99px; background:#1C2541;}
+.char-brow.left{left:9px; transform:rotate(-8deg)}.char-brow.right{right:9px; transform:rotate(8deg)}
+.brow-short .char-brow{width:7px}.brow-long .char-brow{width:14px}
+.char-mouth{position:absolute; left:17px; top:33px; width:9px; height:5px; border-bottom:2px solid #1C2541; border-radius:0 0 10px 10px;}
+.char-neck{position:absolute; left:38px; top:54px; width:14px; height:10px; border-radius:6px; background:#F4C39E; z-index:2;}
+.char-body{position:absolute; left:24px; top:62px; width:43px; height:44px; border-radius:13px 13px 8px 8px; background:#2C83C5; z-index:2;}
+.outfit-hoodie .char-body{background:#17A673; border-radius:18px 18px 9px 9px;}
+.outfit-jacket .char-body{background:linear-gradient(90deg,#1C2541 0 28%,#F8FCFF 28% 72%,#1C2541 72%);}
+.char-arm{position:absolute; top:66px; width:12px; height:43px; border-radius:999px; background:#F4C39E; z-index:1;}
+.char-arm.left{left:13px; transform:rotate(9deg)}.char-arm.right{right:12px; transform:rotate(-9deg)}
+.char-leg{position:absolute; top:104px; width:13px; height:31px; border-radius:7px; background:#243047; z-index:1;}
+.char-leg.left{left:31px}.char-leg.right{right:30px}
+.gender-female .char-body{width:45px; left:23px; clip-path:polygon(12% 0,88% 0,100% 100%,0 100%);}
+.gender-female .char-leg{height:28px;}
+.character-editor{margin-top:14px; display:grid; gap:10px; text-align:left;}
+.character-row{display:grid; gap:7px;}
+.character-label{font-size:11px; font-weight:900; color:var(--ink-soft);}
+.character-options{display:grid; grid-template-columns:repeat(3,1fr); gap:6px;}
+.character-options.two{grid-template-columns:repeat(2,1fr);}
+.character-option{border:1px solid var(--line); border-radius:13px; padding:8px 6px; background:#F8FCFF; color:var(--ink); font-size:11px; font-weight:900; font-family:inherit; cursor:pointer;}
+.character-option.on{background:#EAFBF3; border-color:var(--leaf); color:var(--leaf-dark);}
+.friend-card{cursor:pointer;}
+.friend-profile-sheet{display:grid; gap:12px;}
+.friend-profile-sheet .profile-home{margin:0; box-shadow:none; border:1px solid var(--line);}
+.friend-profile-sheet .profile-pet-preview{min-height:118px;}
+.friend-profile-sheet .friend-avatar{width:54px; height:54px; flex:0 0 54px;}
+.friend-profile-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;}
+.friend-profile-actions .btn:disabled{opacity:.45; cursor:not-allowed; transform:none; box-shadow:none;}
 .growth-card{margin:16px 16px 6px; background:linear-gradient(135deg,#17A673,#63C7B2); border-radius:22px; padding:18px; color:#fff; box-shadow:var(--shadow);}
 .growth-card .amt{font-size:28px; font-weight:900;}
 .growth-card .lab{font-size:11.5px; opacity:.92; font-weight:800;}
@@ -664,6 +715,7 @@ body{
         <p id="profileMeta">登入後可以同步好友、定位分享與散步小隊。</p>
         <div class="profile-edit" id="profileEdit"></div>
       </div>
+      <div class="profile-home" id="profileHome"></div>
 	      <div class="growth-card" id="profileGrowth">
 	        <div class="amt num" id="growthBig">0</div>
 	        <div class="lab">寵物成長值</div>
@@ -758,6 +810,15 @@ const LOCATIONS = [
 ];
 
 /* ================= STATE ================= */
+const DEFAULT_CHARACTER = { gender:'male', hair:'short', eyes:'medium', brow:'medium', outfit:'tee' };
+const CHARACTER_OPTIONS = {
+  gender: [['male','男生'], ['female','女生']],
+  hair: [['short','短髮'], ['bob','中長髮'], ['cap','毛帽']],
+  eyes: [['small','小眼'], ['medium','標準'], ['large','大眼']],
+  brow: [['short','短眉'], ['medium','標準'], ['long','長眉']],
+  outfit: [['tee','城市T'], ['hoodie','連帽衫'], ['jacket','外套']],
+};
+
 let state = {
   steps: 0,
   stepGoal: 8000,
@@ -779,7 +840,8 @@ let state = {
   equipped: [],        // accessory ids currently worn
   unlockedAccessories: [],
   routeHistory: [],
-  ordinarySkipDate: ''
+  ordinarySkipDate: '',
+  character: {...DEFAULT_CHARACTER}
 };
 
 const STEP_LOG_KEY = 'footprintStepLogs:v1';
@@ -817,6 +879,20 @@ function writeJsonStore(key, value){
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
 
+function normalizeCharacter(raw = {}){
+  const pick = (key) => {
+    const allowed = new Set((CHARACTER_OPTIONS[key] || []).map(([value]) => value));
+    return allowed.has(raw?.[key]) ? raw[key] : DEFAULT_CHARACTER[key];
+  };
+  return {
+    gender: pick('gender'),
+    hair: pick('hair'),
+    eyes: pick('eyes'),
+    brow: pick('brow'),
+    outfit: pick('outfit'),
+  };
+}
+
 function loadLocalProgress(){
   const stepLogs = readJsonStore(STEP_LOG_KEY, {});
   const visitLogs = readJsonStore(VISIT_LOG_KEY, {});
@@ -836,6 +912,7 @@ function loadLocalProgress(){
 	  state.hatchGoal = Math.max(1, Math.floor(Number(petLog.hatchGoal) || state.hatchGoal));
 	  state.hatched = Boolean(petLog.hatched) || state.hatchPoints >= state.hatchGoal;
 	  state.photoTaskCount = Math.max(0, Math.floor(Number(petLog.photoTaskCount) || 0));
+	  state.character = normalizeCharacter(petLog.character || state.character);
 	  state.userXp = Math.max(0, Math.floor(Number(petLog.userXp) || computeUserXp()));
 	  state.petXp = Math.max(0, Math.floor(Number(petLog.petXp) || computePetXp()));
 	  updateLevels();
@@ -873,6 +950,7 @@ function persistPetLog(){
 	    hatchGoal: state.hatchGoal,
 	    hatched: state.hatched,
 	    photoTaskCount: state.photoTaskCount,
+	    character: normalizeCharacter(state.character),
 	    userXp: state.userXp,
 	    petXp: state.petXp,
 	    updatedAt: Date.now(),
@@ -1728,14 +1806,18 @@ function publicStatusPayload(){
   const species = state.hatched ? currentPetSpecies() : null;
   return {
     userLevel: state.userLevel,
+    userXp: state.userXp,
     petLevel: state.petLevel,
+    petXp: state.petXp,
     petName: state.hatched ? state.petName : state.eggName,
     petSpecies: species?.id || '',
     petSpeciesName: species?.name || '',
     petEvolutionStage: state.petEvolutionStage,
     petEvolutionLabel: state.hatched ? currentEvolution().label : '孵化中',
     hatched: state.hatched,
+    hatchPoints: state.hatchPoints,
     todaySteps: state.steps,
+    character: normalizeCharacter(state.character),
     updatedAt: Date.now(),
   };
 }
@@ -1767,19 +1849,95 @@ function receiveOnlineSnapshot(snapshot){
 }
 window.receiveOnlineSnapshot = receiveOnlineSnapshot;
 
+function characterHtml(character = state.character, size = ''){
+  const c = normalizeCharacter(character);
+  return `
+    <div class="character-scene ${size}">
+      <div class="character-figure gender-${c.gender} eyes-${c.eyes} brow-${c.brow} outfit-${c.outfit}">
+        <i class="char-hair hair-${c.hair}"></i>
+        <i class="char-head"><i class="char-face">
+          <i class="char-brow left"></i><i class="char-brow right"></i>
+          <i class="char-eye left"></i><i class="char-eye right"></i><i class="char-mouth"></i>
+        </i></i>
+        <i class="char-neck"></i><i class="char-body"></i>
+        <i class="char-arm left"></i><i class="char-arm right"></i>
+        <i class="char-leg left"></i><i class="char-leg right"></i>
+      </div>
+    </div>
+  `;
+}
+
+function characterEditorHtml(){
+  const labels = { gender:'角色', hair:'髮型', eyes:'眼睛', brow:'眉毛', outfit:'服裝' };
+  const current = normalizeCharacter(state.character);
+  return `
+    <div class="character-editor">
+      ${Object.entries(CHARACTER_OPTIONS).map(([key, options]) => `
+        <div class="character-row">
+          <div class="character-label">${labels[key]}</div>
+          <div class="character-options ${options.length === 2 ? 'two' : ''}">
+            ${options.map(([value, label]) => `
+              <button class="character-option ${current[key] === value ? 'on' : ''}" onclick="setCharacterOption('${key}','${value}')">${label}</button>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function setCharacterOption(key, value){
+  if(!CHARACTER_OPTIONS[key]?.some(([option]) => option === value)) return;
+  state.character = normalizeCharacter({...state.character, [key]: value});
+  persistPetLog();
+  scheduleUserStatusSync();
+  renderProfile();
+  renderTop();
+  toast('角色外觀已更新');
+}
+
+function profileHomeHtml(person = onlineState.user, options = {}){
+  const isFriend = Boolean(options.friend);
+  const character = normalizeCharacter(options.character || state.character);
+  const userLevel = Math.max(1, Math.floor(Number(options.userLevel ?? state.userLevel) || 1));
+  const userXp = Math.max(0, Math.floor(Number(options.userXp ?? state.userXp) || 0));
+  const steps = Math.max(0, Math.floor(Number(options.steps ?? state.steps) || 0));
+  const hatched = Boolean(options.hatched ?? state.hatched);
+  const petSpecies = PET_SPECIES.find((species) => species.id === (options.petSpecies || state.petSpecies)) || currentPetSpecies();
+  const petStage = Math.max(1, Math.min(3, Math.floor(Number(options.petEvolutionStage || state.petEvolutionStage) || 1)));
+  const petLevel = Math.max(1, Math.floor(Number(options.petLevel ?? state.petLevel) || 1));
+  const petName = hatched ? (options.petName || state.petName || '寵物') : (options.petName || state.eggName || '寵物蛋');
+  const hatchPoints = Math.max(0, Math.floor(Number(options.hatchPoints ?? state.hatchPoints) || 0));
+  const petPreview = hatched ? pet3DHtml(petSpecies, false, petStage, []) : eggSVG(92, hatchPoints);
+  return `
+    <div class="profile-showcase">
+      ${characterHtml(character)}
+      <div class="profile-stats">
+        <div class="profile-stat"><b>${escapeHtml(person?.displayName || (isFriend ? '好友' : '玩家'))}</b>玩家 Lv.${userLevel}・${userXp.toLocaleString()} EXP</div>
+        <div class="profile-stat"><b>${escapeHtml(petName)} Lv.${petLevel}</b>${hatched ? `${escapeHtml(petSpecies.name)}・第 ${petStage} 型態` : '孵化中'}</div>
+        <div class="profile-stat"><b>${steps.toLocaleString()} 步</b>${isFriend ? '好友今日步數' : '今日真實步數'}</div>
+      </div>
+    </div>
+    <div class="profile-pet-preview">${petPreview}</div>
+  `;
+}
+
 function renderProfile(){
   const avatar = document.getElementById('profileAvatar');
   const name = document.getElementById('profileName');
   const meta = document.getElementById('profileMeta');
   const edit = document.getElementById('profileEdit');
+  const home = document.getElementById('profileHome');
   if(!avatar || !name || !meta || !edit) return;
+  if(home) home.innerHTML = profileHomeHtml(onlineState.user || {displayName:'玩家'});
   if(!onlineState.user){
     avatar.classList.remove('avatar-photo');
     avatar.textContent = '?';
     name.textContent = '請先登入';
-    meta.textContent = '登入後可以設定使用者名稱、同步好友定位與散步小隊。';
+    meta.textContent = `玩家 Lv.${state.userLevel}・${state.userXp.toLocaleString()} EXP`;
     edit.innerHTML = `
-      <div class="profile-login-note">請到「連線」分頁使用 Google 登入。</div>
+      <div class="profile-login-note">可以先自訂角色；登入後會同步好友、定位分享與散步小隊。</div>
+      ${characterEditorHtml()}
       <button class="btn btn-primary" onclick="showTab('online')">前往登入</button>
     `;
     return;
@@ -1787,7 +1945,7 @@ function renderProfile(){
   const displayName = onlineState.user.displayName || '玩家';
   setAvatarElement(avatar, onlineState.user, displayName);
   name.textContent = displayName;
-  meta.textContent = onlineState.user.email || '已登入';
+  meta.textContent = `玩家 Lv.${state.userLevel}・${state.userXp.toLocaleString()} EXP`;
   edit.innerHTML = `
     <label class="avatar-upload-btn">
       <input id="profileAvatarInput" type="file" accept="image/*" onchange="saveProfileAvatar(event)">
@@ -1795,6 +1953,7 @@ function renderProfile(){
     </label>
     <input id="profileNameInput" maxlength="18" value="${escapeHtml(displayName)}" placeholder="輸入使用者名稱">
     <button class="btn btn-primary" onclick="saveProfileName()">儲存使用者名稱</button>
+    ${characterEditorHtml()}
   `;
 }
 
@@ -2029,7 +2188,7 @@ function friendCardHtml(friend){
   const distance = friendDistanceText(friend);
   const status = friendStatusHtml(friend);
   return `
-    <div class="friend-card" onclick="${friend.location ? `focusFriendOnMap('${escapeHtml(friend.uid)}')` : ''}">
+    <div class="friend-card" onclick="openFriendProfile('${escapeHtml(friend.uid)}')">
       ${avatarMarkup(friend, friend.displayName || '友')}
       <div class="friend-main">
         <div class="friend-name">${escapeHtml(friend.displayName || '好友')}</div>
@@ -2039,6 +2198,53 @@ function friendCardHtml(friend){
       <div class="friend-distance">${escapeHtml(distance)}</div>
     </div>
   `;
+}
+
+function openFriendProfile(uid){
+  const friend = onlineState.friends.find((item) => item.uid === uid);
+  if(!friend){
+    toast('找不到這位好友');
+    return;
+  }
+  const locationText = escapeHtml(friendLocationSummary(friend));
+  const distanceText = escapeHtml(friendDistanceText(friend));
+  const updatedText = escapeHtml(friend.location?.updatedAt ? timeAgo(friend.location.updatedAt) : '尚未分享');
+  const canShowLocation = Boolean(validLatLng(friend.location));
+  const sheetContent = document.getElementById('sheetContent');
+  const overlay = document.getElementById('sheetOverlay');
+  if(!sheetContent || !overlay) return;
+  sheetContent.innerHTML = `
+    <div class="friend-profile-sheet">
+      <div class="sheet-head">
+        <div>
+          <span class="tag">好友個人頁</span>
+          <h2>${escapeHtml(friend.displayName || '好友')}</h2>
+          <p>距離 ${distanceText}・位置更新 ${updatedText}</p>
+        </div>
+        ${avatarMarkup(friend, friend.displayName || '友')}
+      </div>
+      ${profileHomeHtml(friend, {
+        friend: true,
+        character: friend.character,
+        userLevel: friend.userLevel,
+        userXp: friend.userXp,
+        steps: friend.todaySteps ?? friend.steps,
+        hatched: friend.hatched,
+        hatchPoints: friend.hatchPoints,
+        petName: friend.petName,
+        petLevel: friend.petLevel,
+        petSpecies: friend.petSpecies,
+        petEvolutionStage: friend.petEvolutionStage,
+      })}
+      <div class="profile-stat"><b>好友位置</b>${locationText}</div>
+      <div class="friend-profile-actions">
+        <button class="btn btn-primary" ${canShowLocation ? `onclick="focusFriendOnMap('${escapeHtml(friend.uid)}')"` : 'disabled'}>查看好友位置</button>
+        <button class="btn btn-ghost" onclick="closeSheet()">關閉</button>
+      </div>
+    </div>
+  `;
+  overlay.classList.add('open');
+  document.getElementById('sheet')?.classList.add('open');
 }
 
 function friendStatusHtml(friend){
@@ -2512,6 +2718,7 @@ function focusFriendOnMap(uid){
   const friend = onlineState.friends.find((item) => item.uid === uid);
   const friendPoint = validLatLng(friend?.location);
   if(!friendPoint){ toast('這位好友尚未分享位置'); return; }
+  closeSheet();
 	  showTab('map');
 	  toggleMapFullscreen(true);
 	  toggleFriendMapPicker(false);
@@ -3114,18 +3321,20 @@ function currentPetSpecies(){
   return PET_SPECIES.find((species) => species.id === id) || PET_SPECIES[0];
 }
 
-function currentPetForm(species = currentPetSpecies()){
-  return species.forms?.[state.petEvolutionStage - 1] || species.forms?.[0] || {name:species.name, parts:[]};
+function currentPetForm(species = currentPetSpecies(), stage = state.petEvolutionStage){
+  const index = Math.max(1, Math.min(3, Math.floor(Number(stage) || 1))) - 1;
+  return species.forms?.[index] || species.forms?.[0] || {name:species.name, parts:[]};
 }
 
-function pet3DHtml(species = currentPetSpecies(), includeNote = true){
-  const form = currentPetForm(species);
+function pet3DHtml(species = currentPetSpecies(), includeNote = true, stage = state.petEvolutionStage, equippedIds = state.equipped){
+  const form = currentPetForm(species, stage);
   const parts = new Set(form.parts || []);
   const part = (name, className) => parts.has(name) ? `<i class="pet3d-part ${className}"></i>` : '';
-  const equipped = state.equipped.map((id) => ACCESSORY_MAP[id]).filter(Boolean).slice(0, 4);
+  const equipped = (equippedIds || []).map((id) => ACCESSORY_MAP[id]).filter(Boolean).slice(0, 4);
   const model = species.model || 'hornback';
+  const testId = includeNote ? ' data-testid="pet-3d-model"' : '';
   return `
-    <div class="pet3d-model model-${model} evo-${state.petEvolutionStage}" data-testid="pet-3d-model" style="--body:${species.body};--head:${species.head};--belly:${species.belly};--accent:${species.accent};--gear:${species.gear || species.accent};--horn:${species.horn || '#F1E5C8'};">
+    <div class="pet3d-model model-${model} evo-${stage}"${testId} style="--body:${species.body};--head:${species.head};--belly:${species.belly};--accent:${species.accent};--gear:${species.gear || species.accent};--horn:${species.horn || '#F1E5C8'};">
       <i class="pet3d-shadow"></i>
       ${part('bookWings','pet3d-bookwing left')}${part('bookWings','pet3d-bookwing right')}
       ${part('jetpack','pet3d-jetpack')}
@@ -3738,6 +3947,7 @@ function renderTop(){
 	  document.getElementById('topStep').textContent = state.steps.toLocaleString();
 	  const growthBig = document.getElementById('growthBig');
 	  if(growthBig) growthBig.textContent = state.petXp.toLocaleString();
+	  if(document.getElementById('screen-me')?.classList.contains('active')) renderProfile();
 	  persistStepLog();
 	  scheduleUserStatusSync();
 	}
@@ -3750,6 +3960,7 @@ renderFilters();
 renderList();
 renderTop();
 renderPet();
+renderProfile();
 renderOnline();
 renderQuest();
 renderReviews();
@@ -4212,13 +4423,17 @@ if(!configured){
       try {
         await update(ref(db, `users/${currentUser.uid}`), {
           userLevel: Math.max(1, Math.floor(Number(status.userLevel) || 1)),
+          userXp: Math.max(0, Math.floor(Number(status.userXp) || 0)),
           petLevel: Math.max(1, Math.floor(Number(status.petLevel) || 1)),
+          petXp: Math.max(0, Math.floor(Number(status.petXp) || 0)),
           petName: String(status.petName || '').slice(0, 24),
           petSpecies: String(status.petSpecies || '').slice(0, 32),
           petSpeciesName: String(status.petSpeciesName || '').slice(0, 32),
           petEvolutionStage: Math.max(1, Math.min(3, Math.floor(Number(status.petEvolutionStage) || 1))),
           petEvolutionLabel: String(status.petEvolutionLabel || '').slice(0, 16),
           hatched: Boolean(status.hatched),
+          hatchPoints: Math.max(0, Math.floor(Number(status.hatchPoints) || 0)),
+          character: normalizeCharacter(status.character || {}),
           todaySteps: Math.max(0, Math.floor(Number(status.todaySteps) || 0)),
           statusUpdatedAt: Date.now(),
         });
