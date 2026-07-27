@@ -208,20 +208,19 @@ test('step counter starts from real daily steps and ignores demo rewards', async
   const result = await page.evaluate(() => {
     setTodaySteps(12, 'test');
     const beforeMemory = state.steps;
-    saveMemory('frini');
     stepTracker.lastMagnitude = 9.8;
     stepTracker.lastStepAt = Date.now() - 400;
     handleMotionStep({ accelerationIncludingGravity: { x: 8, y: 0, z: 9.8 } });
     return {
       beforeMemory,
-      afterMemory: beforeMemory === 12 ? state.steps - 1 : state.steps,
+      afterMemory: state.steps,
       finalSteps: state.steps,
       stored: JSON.parse(localStorage.getItem('footprintStepLogs:v1')),
     };
   });
 
   expect(result.beforeMemory).toBe(12);
-  expect(result.afterMemory).toBe(12);
+  expect(result.afterMemory).toBe(13);
   expect(result.finalSteps).toBe(13);
   const today = new Date().toLocaleDateString('sv-SE');
   expect(result.stored[today].steps).toBe(13);
@@ -255,8 +254,8 @@ test('nearby places falls back to client Google Places for GitHub Pages', async 
                     vicinity: 'Mock Road 1',
                     geometry: {
                       location: {
-                        lat: () => 24.18,
-                        lng: () => 120.64,
+                        lat: () => 24.1816,
+                        lng: () => 120.645,
                       },
                     },
                     types: ['cafe'],
@@ -273,7 +272,143 @@ test('nearby places falls back to client Google Places for GitHub Pages', async 
 
   expect(result.provider).toBe('google');
   expect(result.places[0].name).toBe('Mock Coffee');
-  expect(result.places[0].latitude).toBe(24.18);
+  expect(result.places[0].latitude).toBe(24.1816);
+});
+
+test('place classification keeps schools hotels and offices out of food categories', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(() => {
+    const school = toGameLocation({
+      id: 'school-1',
+      name: '逢甲大學',
+      latitude: 24.1815,
+      longitude: 120.6449,
+      category: 'point_of_interest',
+      types: ['point_of_interest', 'establishment'],
+      address: '台中市',
+    }, 0, 'all');
+    const hotel = toGameLocation({
+      id: 'hotel-1',
+      name: '碧根逢甲酒店 Beacon Hotel',
+      latitude: 24.1815,
+      longitude: 120.6449,
+      category: 'lodging',
+      types: ['lodging', 'point_of_interest'],
+      address: '台中市',
+    }, 1, 'all');
+    const office = toGameLocation({
+      id: 'office-1',
+      name: '天鵝脖子街-台中接待處',
+      latitude: 24.1815,
+      longitude: 120.6449,
+      category: 'point_of_interest',
+      types: ['point_of_interest'],
+      address: '台中市',
+    }, 2, 'all');
+    return {
+      schoolType: school?.type,
+      schoolTag: school?.tag,
+      hotelType: hotel?.type,
+      hotelAsFood: toGameLocation({...hotel, latitude: 24.1815, longitude: 120.6449, category: 'lodging', types: ['lodging']}, 3, 'food'),
+      hotelAsDessert: toGameLocation({...hotel, latitude: 24.1815, longitude: 120.6449, category: 'lodging', types: ['lodging']}, 4, 'dessert'),
+      officeType: office?.type,
+    };
+  });
+
+  expect(result.schoolType).toBe('school');
+  expect(result.schoolTag).toBe('學校');
+  expect(result.hotelType).toBe('lodging');
+  expect(result.hotelAsFood).toBeNull();
+  expect(result.hotelAsDessert).toBeNull();
+  expect(result.officeType).toBe('office');
+});
+
+test('client places search uses a 500 meter radius and filters distant results', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(async () => {
+    map = {};
+    const requests = [];
+    window.google = {
+      maps: {
+        LatLng: function LatLng(lat, lng) { return { lat, lng }; },
+        places: {
+          PlacesServiceStatus: { OK: 'OK', ZERO_RESULTS: 'ZERO_RESULTS' },
+          PlacesService: function PlacesService() {
+            return {
+              nearbySearch(request, callback) {
+                requests.push(request);
+                callback([
+                  {
+                    place_id: `near-${requests.length}`,
+                    name: `Near ${requests.length}`,
+                    vicinity: 'near',
+                    types: ['restaurant'],
+                    geometry: { location: { lat: () => HERE.lat + 0.001, lng: () => HERE.lng } },
+                  },
+                  {
+                    place_id: `far-${requests.length}`,
+                    name: `Far ${requests.length}`,
+                    vicinity: 'far',
+                    types: ['restaurant'],
+                    geometry: { location: { lat: () => HERE.lat + 0.02, lng: () => HERE.lng } },
+                  },
+                ], 'OK');
+              },
+            };
+          },
+        },
+      },
+    };
+    const data = await loadNearbyPlacesFromGoogleMaps('all');
+    return {
+      radii: requests.map((request) => request.radius),
+      hasUntypedRequest: requests.some((request) => !request.type),
+      names: data.places.map((place) => place.name),
+    };
+  });
+
+  expect(new Set(result.radii)).toEqual(new Set([500]));
+  expect(result.hasUntypedRequest).toBe(true);
+  expect(result.names.every((name) => name.startsWith('Near'))).toBe(true);
+});
+
+test('check-in cannot be completed without verified location proof', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(() => {
+    const id = LOCATIONS[0].id;
+    finishCheckin(id);
+    const blocked = Boolean(state.visited[id]);
+    finishCheckin(id, { verified: true, distance: 20 });
+    return {
+      blocked,
+      verified: Boolean(state.visited[id]),
+      city: state.visited[id]?.city,
+    };
+  });
+
+  expect(result.blocked).toBe(false);
+  expect(result.verified).toBe(true);
+  expect(result.city).toBeTruthy();
+});
+
+test('collection groups progress by city instead of individual places', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(() => {
+    state.visited = {
+      [LOCATIONS[0].id]: { date: '2026-07-28', city: '台中市' },
+      [LOCATIONS[1].id]: { date: '2026-07-28', city: '台中市' },
+    };
+    renderBook();
+    return {
+      cardCount: document.querySelectorAll('#galGrid .gcard').length,
+      number: document.getElementById('galN').textContent,
+      text: document.getElementById('galGrid').textContent,
+    };
+  });
+
+  expect(result.cardCount).toBe(1);
+  expect(result.number).toBe('1');
+  expect(result.text).toContain('台中市');
 });
 
 test('blind quest planner starts hidden route and validates a city photo', async ({ page }) => {
@@ -779,7 +914,7 @@ test('completed party activity publishes a shared reward for other members', asy
       partyInvites: [],
       sharing: false,
     });
-    finishCheckin(LOCATIONS[0].id);
+    finishCheckin(LOCATIONS[0].id, { verified: true, distance: 12 });
     return window.sharedPartyRewards[0];
   });
 
@@ -836,6 +971,40 @@ test('friend distance only appears after both sides share locations', async ({ p
   });
 
   await expect(page.locator('#friendList')).toContainText('57 m');
+});
+
+test('friend list shows public user and pet status', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="online"]').click();
+  await page.evaluate(() => {
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: { uid: 'me', displayName: 'Me', email: 'me@example.com' },
+      friendCode: 'ABC12345',
+      friends: [
+        {
+          uid: 'friend-1',
+          displayName: 'Friend A',
+          userLevel: 8,
+          petLevel: 5,
+          petName: 'Momo',
+          petEvolutionLabel: '成長體',
+          hatched: true,
+          todaySteps: 4321,
+        },
+      ],
+      party: null,
+      partyInvites: [],
+      sharing: false,
+      myLocation: null,
+    });
+  });
+
+  await expect(page.locator('#friendList')).toContainText('Lv.8');
+  await expect(page.locator('#friendList')).toContainText('4,321');
+  await expect(page.locator('#friendList')).toContainText('Momo');
+  await expect(page.locator('#friendList')).toContainText('Lv.5');
 });
 
 test('friend map info shows distance and approximate location details', async ({ page }) => {

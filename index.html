@@ -163,6 +163,10 @@ body{
 .review-card{background:var(--paper); border-radius:18px; padding:13px; box-shadow:var(--shadow);}
 .review-card strong{display:block; color:var(--ink); font-size:13.5px; margin-bottom:4px;}
 .review-card p{font-size:12px; color:var(--ink-soft); line-height:1.55; margin:0;}
+.review-input{width:100%; min-height:74px; resize:vertical; border:1px solid var(--line); border-radius:14px; padding:11px 12px; font:inherit; font-size:13px; color:var(--ink); background:#F8FCFF; margin-top:10px;}
+.status-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;}
+.status-pill{background:#F8FCFF; border:1px solid var(--line); border-radius:14px; padding:9px; font-size:11px; color:var(--ink-soft);}
+.status-pill b{display:block; color:var(--ink); font-size:12.5px; margin-bottom:2px;}
 
 .filter-row{display:flex; gap:8px; padding:2px 16px 10px; overflow-x:auto;}
 .chip{flex-shrink:0; padding:7px 14px; border-radius:999px; background:var(--paper); font-size:12.5px; font-weight:700; color:var(--ink-soft); box-shadow:var(--shadow); border:2px solid transparent; cursor:pointer;}
@@ -276,6 +280,8 @@ body{
 .pet3d-horns{top:-12px; width:18px; height:30px; border-radius:70% 70% 20% 20%; transform-origin:bottom center;}
 .pet3d-horns.left{left:20px; transform:rotateZ(-28deg) translateZ(18px)}
 .pet3d-horns.right{right:20px; transform:rotateZ(28deg) translateZ(18px)}
+.pet3d-accessories{position:absolute; left:18px; right:18px; bottom:2px; display:flex; justify-content:center; gap:5px; transform:translateZ(46px); pointer-events:none;}
+.pet3d-accessory{width:24px; height:24px; border-radius:999px; background:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; box-shadow:0 5px 12px rgba(28,37,65,.18);}
 .pet-species-note{font-size:11px; color:var(--ink-soft); margin-top:6px; font-weight:800;}
 .evo-summary{margin:10px 18px 4px; display:grid; grid-template-columns:repeat(3,1fr); gap:7px;}
 .evo-chip{background:#fff; border:1px solid var(--line); border-radius:14px; padding:8px 5px; text-align:center; font-size:10.5px; color:var(--ink-soft); font-weight:900;}
@@ -529,7 +535,7 @@ body{
         <div class="loc-info">
           <div class="loc-name">今天與主人一起走了 <span class="num" id="bioSteps">0</span> 步</div>
           <div class="loc-meta">第一個到訪地點：<span id="bioFirst">尚未到訪</span></div>
-          <div class="loc-meta">已收集 <span id="bioAcc">0</span> 件地點記憶物</div>
+          <div class="loc-meta">已解鎖 <span id="bioAcc">0</span> 件任務配件</div>
           <div class="loc-meta" id="bioPlaces">還沒有到訪紀錄</div>
         </div>
       </div>
@@ -537,12 +543,12 @@ body{
 
     <!-- ===== COLLECTION SCREEN ===== -->
     <div class="screen" id="screen-book">
-      <div class="section-title">西屯圖鑑</div>
+      <div class="section-title">縣市圖鑑</div>
       <div class="gallery-summary">
-        <div><div class="num" id="galN">0 / 8</div><div class="lab">地點記憶物已收集</div></div>
+        <div><div class="num" id="galN">0</div><div class="lab">已探索縣市</div></div>
         <div style="font-size:34px;">📖</div>
       </div>
-      <div class="section-title">地點限定配件</div>
+      <div class="section-title">城市探索紀錄</div>
       <div class="gallery-grid" id="galGrid"></div>
     </div>
 
@@ -607,13 +613,13 @@ body{
 	      <div class="growth-card" id="profileGrowth">
 	        <div class="amt num" id="growthBig">0</div>
 	        <div class="lab">寵物成長值</div>
-	        <p>完成任務、到訪地點、儲存合照與走完盲盒路線，都會推進寵物進化。</p>
+	        <p>完成任務、真實到訪、留下旅程評語與走完盲盒路線，都會推進寵物進化。</p>
 	      </div>
 	      <div class="section-title">成長怎麼推進</div>
 	      <div class="source-list">
 	        <div class="source-item"><div class="l">🚶 每日真實步數</div><div class="r">持續累積</div></div>
 	        <div class="source-item"><div class="l">📍 首次到訪新地點</div><div class="r">孵化 +15</div></div>
-	        <div class="source-item"><div class="l">📸 完成到訪合照</div><div class="r">成長 +18</div></div>
+	        <div class="source-item"><div class="l">💬 旅程後留下評語</div><div class="r">進化 +0.5%</div></div>
 	        <div class="source-item"><div class="l">🧭 完成盲盒路線</div><div class="r">孵化 +30</div></div>
 	        <div class="source-item"><div class="l">📝 完成照片任務</div><div class="r">孵化 +8</div></div>
 	      </div>
@@ -714,8 +720,10 @@ let state = {
   hatchGoal: 100,
   hatched: false,
   petColor: '#FF8A6B',
+  photoTaskCount: 0,
   visited: {},        // id -> {date}
   equipped: [],        // accessory ids currently worn
+  unlockedAccessories: [],
   routeHistory: [],
   ordinarySkipDate: ''
 };
@@ -763,6 +771,9 @@ function loadLocalProgress(){
 	  state.steps = Math.max(0, Number(stepLogs[today]?.steps || 0));
 	  state.visited = visitLogs.visited || {};
 	  state.equipped = Array.isArray(visitLogs.equipped) ? visitLogs.equipped : state.equipped;
+	  state.unlockedAccessories = Array.isArray(visitLogs.unlockedAccessories)
+	    ? visitLogs.unlockedAccessories
+	    : state.equipped.slice();
 	  state.eggName = String(petLog.eggName || state.eggName).slice(0, 12);
 	  state.petName = String(petLog.petName || state.petName || state.eggName).slice(0, 12);
 	  state.petSpecies = String(petLog.petSpecies || state.petSpecies || '').slice(0, 24);
@@ -770,6 +781,7 @@ function loadLocalProgress(){
 	  state.hatchPoints = Math.max(0, Math.floor(Number(petLog.hatchPoints) || 0));
 	  state.hatchGoal = Math.max(1, Math.floor(Number(petLog.hatchGoal) || state.hatchGoal));
 	  state.hatched = Boolean(petLog.hatched) || state.hatchPoints >= state.hatchGoal;
+	  state.photoTaskCount = Math.max(0, Math.floor(Number(petLog.photoTaskCount) || 0));
 	  state.userXp = Math.max(0, Math.floor(Number(petLog.userXp) || computeUserXp()));
 	  state.petXp = Math.max(0, Math.floor(Number(petLog.petXp) || computePetXp()));
 	  updateLevels();
@@ -792,6 +804,7 @@ function persistVisitLog(){
   writeJsonStore(VISIT_LOG_KEY, {
     visited: state.visited,
     equipped: state.equipped,
+    unlockedAccessories: state.unlockedAccessories,
     updatedAt: Date.now(),
   });
 }
@@ -805,6 +818,7 @@ function persistPetLog(){
 	    hatchPoints: state.hatchPoints,
 	    hatchGoal: state.hatchGoal,
 	    hatched: state.hatched,
+	    photoTaskCount: state.photoTaskCount,
 	    userXp: state.userXp,
 	    petXp: state.petXp,
 	    updatedAt: Date.now(),
@@ -821,7 +835,7 @@ function computePetXp(){
 
 const EVOLUTION_STAGES = [
   { stage:1, label:'幼體', minXp:0, nextXp:180, difficulty:'基礎任務' },
-  { stage:2, label:'成長體', minXp:180, nextXp:520, difficulty:'需要更多路線與合照' },
+  { stage:2, label:'成長體', minXp:180, nextXp:520, difficulty:'需要更多路線、到訪與旅程評語' },
   { stage:3, label:'完全體', minXp:520, nextXp:null, difficulty:'已達完全進化' },
 ];
 
@@ -871,17 +885,47 @@ function awardPetGrowth(points, reason = '任務'){
   renderTop();
   if(document.getElementById('screen-pet')?.classList.contains('active')) renderPet();
   if(state.hatched && state.petEvolutionStage > beforeStage){
+    if(state.petEvolutionStage >= 2) unlockAccessory('rain-orbit', '寵物進化');
     toast(`${state.petName} 進化成 ${currentEvolution().label}！`);
   } else if(state.hatched) {
     toast(`${reason}完成，寵物成長 +${gain}`);
   }
 }
 
+function reviewGrowthReward(){
+  if(!state.hatched) return 0;
+  const current = currentEvolution();
+  const next = nextEvolution();
+  const span = next ? Math.max(1, next.minXp - current.minXp) : 520;
+  return Math.max(1, Math.ceil(span * 0.005));
+}
+
+function submitRouteReview(routeId){
+  const entry = state.routeHistory.find((item) => item.id === routeId);
+  if(!entry){ toast('找不到這趟旅程'); return; }
+  if(entry.reviewed){ toast('這趟旅程已經留下評語'); return; }
+  const input = document.getElementById(`reviewInput-${routeId}`);
+  const text = String(input?.value || '').trim().slice(0, 160);
+  if(text.length < 4){ toast('評語至少 4 個字'); return; }
+  entry.review = text;
+  entry.reviewed = true;
+  entry.reviewedAt = Date.now();
+  state.userXp += 12;
+  if(state.hatched) awardPetGrowth(reviewGrowthReward(), '旅程評語');
+  else awardHatchPoints(5, '旅程評語');
+  unlockAccessory('review-badge', '旅程評語');
+  persistPetLog();
+  window.FootprintOnline?.recordRoute?.(entry);
+  renderQuest();
+  renderReviews();
+  toast('評語已留下，獎勵已領取');
+}
+
 const PARTY_REWARD_META = {
   photoTask: { icon:'📸', label:'照片任務' },
   blindRoute: { icon:'🧭', label:'盲盒路線' },
   visit: { icon:'📍', label:'地點到訪' },
-  memory: { icon:'🌿', label:'合照記憶' },
+  review: { icon:'💬', label:'旅程評語' },
 };
 
 function normalizePartyReward(raw){
@@ -919,6 +963,7 @@ function applyPartyReward(raw){
   if(reward.userXp) state.userXp += reward.userXp;
   if(state.hatched) awardPetGrowth(growth, '小隊共享獎勵');
   else awardHatchPoints(reward.hatchPoints || Math.max(1, Math.round(growth / 3)), '小隊共享獎勵');
+  unlockAccessory('team-band', '小隊共享');
   updateLevels();
   persistPetLog();
   renderTop();
@@ -946,6 +991,7 @@ function setTodaySteps(steps, source = 'motion'){
   if(nextSteps === state.steps) return;
 	  state.steps = nextSteps;
 	  updateLevels();
+	  if(state.steps >= 3000) unlockAccessory('step-boots', '真實步數');
 	  renderTop();
   if(document.getElementById('screen-pet')?.classList.contains('active')) renderPet();
   persistStepLog();
@@ -1061,6 +1107,7 @@ function recordVisitBackend(location){
     name: location.name,
     type: location.type,
     tag: location.tag,
+    city: cityForLocation(location),
     lat: location.lat,
     lng: location.lng,
     visitedAt: Date.now(),
@@ -1317,6 +1364,11 @@ function renderQuest(){
         <strong>週/月回顧已更新</strong>
         ${latest ? `任務 ${latest.tasks} 個・約 ${latest.steps.toLocaleString()} 步・${latest.time}` : '前往「我的」查看城市回顧。'}
       </div>
+      ${latest && !latest.reviewed ? `
+        <textarea class="review-input" id="reviewInput-${latest.id}" maxlength="160" placeholder="留下這趟旅程的評語，例如：路線感受、店家印象、想推薦給朋友的理由"></textarea>
+        <button class="btn btn-primary" onclick="submitRouteReview('${latest.id}')">送出評語並領取獎勵</button>
+        <div class="privacy-note">評語獎勵：寵物蛋孵化 +5；若已孵化，寵物進化進度 +0.5%。同一趟旅程只能領一次。</div>
+      ` : latest?.review ? `<div class="privacy-note">你的評語：${escapeHtml(latest.review)}</div>` : ''}
       <button class="btn btn-primary" onclick="resetQuest()">再開一條盲盒路線</button>
     `;
     return;
@@ -1459,7 +1511,10 @@ async function handleQuestPhoto(event){
   questState.validation = result;
   if(result.ok){
     questState.phase = 'checked';
+    state.photoTaskCount += 1;
     awardHatchPoints(8, '照片任務');
+    if(state.photoTaskCount >= 3) unlockAccessory('lens-charm', '照片任務');
+    persistPetLog();
     sharePartyReward({
       kind: 'photoTask',
       title: '照片任務驗證',
@@ -1515,6 +1570,7 @@ function completeBlindQuest(){
 	  awardHatchPoints(30, '盲盒路線');
 	  if(state.hatched) awardPetGrowth(growthReward, '盲盒路線');
 	  else state.petXp += 20;
+	  unlockAccessory('route-scarf', '盲盒路線');
 	  updateLevels();
 	  const finalLoc = questState.route.at(-1);
   const entry = {
@@ -1576,7 +1632,7 @@ function renderReviews(){
   list.innerHTML = `
     <div class="review-card"><strong>本週城市回顧</strong><p>完成 ${state.routeHistory.length} 次探索，累積約 ${totalSteps.toLocaleString()} 步。最常選擇：${state.routeHistory[0].title}。</p></div>
     ${state.routeHistory.slice(0,3).map((entry)=>`
-	      <div class="review-card"><strong>${entry.title}</strong><p>${entry.summary}<br>任務 ${entry.tasks} 個・${entry.time}・寵物成長 +${entry.reward}</p></div>
+	      <div class="review-card"><strong>${entry.title}</strong><p>${entry.summary}<br>任務 ${entry.tasks} 個・${entry.time}・寵物成長 +${entry.reward}${entry.review ? `<br>評語：${escapeHtml(entry.review)}` : '<br>尚未留下評語'}</p></div>
     `).join('')}
   `;
 }
@@ -1607,10 +1663,35 @@ let inviteSelectionTouched = false;
 let selectedShareUids = new Set();
 let shareSelectionTouched = false;
 let launchActionHandled = false;
+let statusSyncTimer = null;
 
 function firebaseConfigured(){
   const cfg = window.FOOTPRINT_FIREBASE_CONFIG || {};
   return ['apiKey','authDomain','databaseURL','projectId','appId'].every((key) => cfg[key] && !String(cfg[key]).includes('%VITE_'));
+}
+
+function publicStatusPayload(){
+  const species = state.hatched ? currentPetSpecies() : null;
+  return {
+    userLevel: state.userLevel,
+    petLevel: state.petLevel,
+    petName: state.hatched ? state.petName : state.eggName,
+    petSpecies: species?.id || '',
+    petSpeciesName: species?.name || '',
+    petEvolutionStage: state.petEvolutionStage,
+    petEvolutionLabel: state.hatched ? currentEvolution().label : '孵化中',
+    hatched: state.hatched,
+    todaySteps: state.steps,
+    updatedAt: Date.now(),
+  };
+}
+
+function scheduleUserStatusSync(){
+  if(!onlineState.user || !window.FootprintOnline?.updateStatus) return;
+  clearTimeout(statusSyncTimer);
+  statusSyncTimer = setTimeout(() => {
+    window.FootprintOnline?.updateStatus?.(publicStatusPayload());
+  }, 450);
 }
 
 function receiveOnlineSnapshot(snapshot){
@@ -1892,14 +1973,30 @@ function renderPartyInvitePicker(container, signedIn){
 
 function friendCardHtml(friend){
   const distance = friendDistanceText(friend);
+  const status = friendStatusHtml(friend);
   return `
     <div class="friend-card" onclick="${friend.location ? `focusFriendOnMap('${escapeHtml(friend.uid)}')` : ''}">
       ${avatarMarkup(friend, friend.displayName || '友')}
       <div class="friend-main">
         <div class="friend-name">${escapeHtml(friend.displayName || '好友')}</div>
         <div class="friend-meta">${friend.location ? `更新 ${timeAgo(friend.location.updatedAt)}` : '尚未分享位置'}</div>
+        ${status}
       </div>
       <div class="friend-distance">${escapeHtml(distance)}</div>
+    </div>
+  `;
+}
+
+function friendStatusHtml(friend){
+  const userLevel = Math.max(1, Math.floor(Number(friend.userLevel) || 1));
+  const petLevel = Math.max(1, Math.floor(Number(friend.petLevel) || 1));
+  const steps = Math.max(0, Math.floor(Number(friend.todaySteps) || Number(friend.steps) || 0));
+  const petName = friend.hatched ? (friend.petName || '寵物') : '寵物蛋';
+  const evo = friend.hatched ? (friend.petEvolutionLabel || `第 ${friend.petEvolutionStage || 1} 型態`) : '孵化中';
+  return `
+    <div class="status-grid">
+      <div class="status-pill"><b>玩家 Lv.${userLevel}</b>${steps.toLocaleString()} 步</div>
+      <div class="status-pill"><b>${escapeHtml(petName)} Lv.${petLevel}</b>${escapeHtml(evo)}</div>
     </div>
   `;
 }
@@ -2375,6 +2472,7 @@ function focusFriendOnMap(uid){
 /* ================= 真正的 Google Maps（需要你自己的 API 金鑰） ================= */
 const DEFAULT_MAP_ZOOM = 14;
 const USER_LOCATION_ZOOM = 15;
+const NEARBY_RADIUS_M = 500;
 let map, userMarker, friendInfoWindow, mapMarkers = [], friendMarkers = [];
 let lastMapTouchAt = 0;
 let lastMapTouchEventAt = 0;
@@ -2551,12 +2649,11 @@ function renderMapMarkers(){
   mapMarkers.forEach(m=>m.setMap(null));
   mapMarkers = LOCATIONS.map(l=>{
     const visited = !!state.visited[l.id];
-    const acc = accessoryFor(l);
     const marker = new google.maps.Marker({
       position:{lat:l.lat, lng:l.lng},
       map,
       title:l.name,
-      label:{text:acc.icon, fontSize:'14px'},
+      label:{text:iconForType(l.type), fontSize:'14px'},
       icon:{
         path: google.maps.SymbolPath.CIRCLE,
         scale: 16,
@@ -2632,7 +2729,7 @@ function openGoogleMapsHere(){
 
 async function loadNearbyPlaces(apiLayer){
   try {
-    const response = await fetch(`/api/nearby-places?lat=${HERE.lat}&lon=${HERE.lng}&layer=${apiLayer}&radius=900`);
+    const response = await fetch(`/api/nearby-places?lat=${HERE.lat}&lon=${HERE.lng}&layer=${apiLayer}&radius=${NEARBY_RADIUS_M}`);
     if(!response.ok) throw new Error(`api ${response.status}`);
     const data = await response.json();
     if(!data.ok) throw new Error(data.error?.message || data.error || 'nearby places failed');
@@ -2649,7 +2746,7 @@ function loadNearbyPlacesFromGoogleMaps(apiLayer){
       return;
     }
 	    const includedTypes = {
-	      all: ['restaurant', 'cafe', 'bakery', 'park', 'tourist_attraction', 'museum', 'convenience_store', 'supermarket'],
+	      all: [null, 'restaurant', 'cafe', 'bakery', 'park', 'tourist_attraction', 'museum', 'convenience_store', 'supermarket', 'lodging', 'school'],
 	      food: ['restaurant', 'meal_takeaway'],
 	      scenic: ['tourist_attraction', 'museum'],
 	      cafe: ['cafe'],
@@ -2662,7 +2759,7 @@ function loadNearbyPlacesFromGoogleMaps(apiLayer){
     const service = new google.maps.places.PlacesService(map);
     const baseRequest = {
       location: new google.maps.LatLng(HERE.lat, HERE.lng),
-      radius: 900,
+      radius: NEARBY_RADIUS_M,
     };
     const normalize = (place, index) => ({
       id: place.place_id || `maps-${index}`,
@@ -2692,7 +2789,10 @@ function loadNearbyPlacesFromGoogleMaps(apiLayer){
           if(!id || seen.has(id)) return false;
           seen.add(id);
           return true;
-        }).slice(0, 12).map(normalize).filter((place) => place.name && Number.isFinite(place.latitude) && Number.isFinite(place.longitude));
+        }).map(normalize)
+          .filter((place) => place.name && Number.isFinite(place.latitude) && Number.isFinite(place.longitude))
+          .filter((place) => haversineSteps(HERE.lat, HERE.lng, place.latitude, place.longitude).meters <= NEARBY_RADIUS_M)
+          .sort((a, b) => haversineSteps(HERE.lat, HERE.lng, a.latitude, a.longitude).meters - haversineSteps(HERE.lat, HERE.lng, b.latitude, b.longitude).meters);
         resolve({ ok: true, provider: 'google', places });
       })
       .catch(reject);
@@ -2876,6 +2976,7 @@ function pet3DHtml(species = currentPetSpecies(), includeNote = true){
   const form = currentPetForm(species);
   const parts = new Set(form.parts || []);
   const part = (name, className) => parts.has(name) ? `<i class="pet3d-part ${className}"></i>` : '';
+  const equipped = state.equipped.map((id) => ACCESSORY_MAP[id]).filter(Boolean).slice(0, 4);
   return `
     <div class="pet3d-model evo-${state.petEvolutionStage}" data-testid="pet-3d-model" style="--body:${species.body};--head:${species.head};--belly:${species.belly};--accent:${species.accent};">
       <i class="pet3d-shadow"></i>
@@ -2889,6 +2990,7 @@ function pet3DHtml(species = currentPetSpecies(), includeNote = true){
       </i>
       ${part('fins','pet3d-fin left')}${part('fins','pet3d-fin right')}${part('tail','pet3d-tail')}
       ${part('orbit','pet3d-orbit')}
+      ${equipped.length ? `<span class="pet3d-accessories">${equipped.map((item) => `<i class="pet3d-accessory" title="${escapeHtml(item.name)}">${item.icon}</i>`).join('')}</span>` : ''}
     </div>
     ${includeNote ? `<div class="pet-species-note">${species.name}・${form.name}・拖曳可以 360° 旋轉查看</div>` : ''}
   `;
@@ -2914,20 +3016,36 @@ function bindPet3DRotation(){
   holder.addEventListener('pointercancel', end);
 }
 
-/* ================= ACCESSORY DEFINITIONS (tied to locations) ================= */
-const ACC_MAP = {
-  frini:{id:'coffee', name:'咖啡拉花光環', icon:'☕'},
-  ziye:{id:'window', name:'老宅木窗背包', icon:'🪟'},
-  jt:{id:'scope', name:'高空瞭望鏡', icon:'🔭'},
-  maple:{id:'maple', name:'楓葉披風', icon:'🍁'},
-  fengchia:{id:'lantern', name:'燈籠夜行帽', icon:'🏮'},
-  '2ddessert':{id:'icecream', name:'芒果冰淇淋帽', icon:'🍧'},
-  bianpu:{id:'book', name:'漂浮書本背飾', icon:'📚'},
-  tsutaya:{id:'glasses', name:'閱讀眼鏡', icon:'👓'}
-};
+/* ================= ACCESSORY DEFINITIONS (task unlocks) ================= */
+const ACCESSORIES = [
+  {id:'sprout-pin', name:'新芽胸章', icon:'🌱', unlock:'完成首次真實到訪認證'},
+  {id:'route-scarf', name:'路線披巾', icon:'🧣', unlock:'完成一趟盲盒路線'},
+  {id:'lens-charm', name:'觀察鏡吊飾', icon:'🔎', unlock:'通過 3 次照片任務'},
+  {id:'city-crown', name:'城市小冠', icon:'👑', unlock:'累積 5 個到訪地點'},
+  {id:'review-badge', name:'評語徽章', icon:'💬', unlock:'旅程結束後留下評語'},
+  {id:'team-band', name:'小隊臂章', icon:'🤝', unlock:'領取一次小隊共享獎勵'},
+  {id:'step-boots', name:'踏步靴', icon:'🥾', unlock:'單日達 3000 步'},
+  {id:'rain-orbit', name:'雨光環', icon:'💧', unlock:'寵物進化到成長體'},
+];
+const ACCESSORY_MAP = Object.fromEntries(ACCESSORIES.map((item) => [item.id, item]));
+
+function isAccessoryUnlocked(id){
+  return state.unlockedAccessories.includes(id);
+}
+
+function unlockAccessory(id, reason = '任務'){
+  if(!ACCESSORY_MAP[id] || isAccessoryUnlocked(id)) return false;
+  state.unlockedAccessories.push(id);
+  persistVisitLog();
+  if(document.getElementById('screen-pet')?.classList.contains('active')) renderPet();
+  toast(`${reason}解鎖配件：${ACCESSORY_MAP[id].name}`);
+  return true;
+}
 
 function iconForType(type){
   if(type === 'cafe') return '☕';
+  if(type === 'lodging') return '🏨';
+  if(type === 'office') return '🏢';
   if(type === 'convenience') return '🏪';
   if(type === 'supermarket') return '🛒';
   if(type === 'park' || type === 'scenic') return '🍁';
@@ -2946,6 +3064,8 @@ function iconForType(type){
 function tagForType(type){
   return {
     cafe: '咖啡廳',
+    lodging: '住宿',
+    office: '辦公據點',
     convenience: '便利商店',
     supermarket: '超市',
     park: '公園',
@@ -2976,7 +3096,11 @@ function layerForApi(filter){
 
 function typeFromPlace(place){
   const tokens = [place.category, ...(place.types || [])].filter(Boolean).join(' ').toLowerCase();
-  if(tokens.includes('school') || tokens.includes('university')) return 'school';
+  const name = String(place.name || '').toLowerCase();
+  const rawName = String(place.name || '');
+  if(tokens.includes('school') || tokens.includes('university') || /大學|學校|高中|國中|國小|university|school/.test(rawName)) return 'school';
+  if(tokens.includes('lodging') || /hotel|motel|inn|hostel|飯店|酒店|旅館|旅店|商旅|旅社/.test(name + rawName)) return 'lodging';
+  if(tokens.includes('local_government_office') || tokens.includes('real_estate_agency') || /接待處|辦公室|公司|股份|企業|中心/.test(rawName)) return 'office';
   if(tokens.includes('bank') || tokens.includes('atm')) return 'bank';
   if(tokens.includes('train_station') || tokens.includes('subway_station') || tokens.includes('transit_station') || tokens.includes('bus_station')) return 'station';
   if(tokens.includes('convenience_store')) return 'convenience';
@@ -2995,6 +3119,8 @@ function typeFromPlace(place){
 function colorForType(type, index){
   const colors = {
     cafe: '#FFD9C9',
+    lodging: '#E9F0FF',
+    office: '#EEF4F6',
     convenience: '#E6F7E9',
     supermarket: '#EAF3FF',
     park: '#DFF3E0',
@@ -3023,6 +3149,8 @@ const ROUTE_RULES = {
   dessert: { key:'restaurant', theme:'城市色彩', taskable:true, landmarkOK:false, use:'觀察甜點店招牌、櫥窗與色彩' },
   book: { key:'clothes', theme:'建築細節', taskable:true, landmarkOK:false, use:'觀察門面、窗景與街區安靜角落' },
   night: { key:'marketplace', theme:'老街痕跡', taskable:true, landmarkOK:false, use:'觀察攤位紋理與夜間光線' },
+  lodging: { key:'lodging', theme:'城市色彩', taskable:false, landmarkOK:true, use:'只作方向地標，不作餐飲或拍照任務' },
+  office: { key:'office', theme:'', taskable:false, landmarkOK:false, use:'只作方向參照，不作任務點' },
 };
 
 function routeRuleForType(type){
@@ -3030,21 +3158,9 @@ function routeRuleForType(type){
 }
 
 function matchesFilterType(type, filter){
-  if(filter === 'all') return !['bank','station','school'].includes(type);
+  if(filter === 'all') return true;
   if(filter === 'food') return type === 'food';
   return type === filter;
-}
-
-function accessoryFor(location){
-  if(!ACC_MAP[location.id]){
-    const icon = iconForType(location.type);
-    ACC_MAP[location.id] = {
-      id: `acc-${location.id}`,
-      name: `${location.name.slice(0, 8)}記憶物`,
-      icon,
-    };
-  }
-  return ACC_MAP[location.id];
 }
 
 function toGameLocation(place, index, requestedFilter = 'all'){
@@ -3063,16 +3179,11 @@ function toGameLocation(place, index, requestedFilter = 'all'){
     lng: place.longitude,
     placeId: place.source === 'google' ? place.id : '',
     desc: place.address || `從 ${place.source === 'google' ? 'Google Places' : 'OpenStreetMap'} 取得的附近真實地點。`,
-	    gift: '',
-	    giftIcon: iconForType(type),
 	    routeRuleKey: rule.key,
 	    routeTheme: rule.theme,
 	    taskable: rule.taskable,
 	    landmarkOK: rule.landmarkOK,
 	  };
-  const acc = accessoryFor(location);
-  location.gift = acc.name;
-  location.giftIcon = acc.icon;
   return location;
 }
 
@@ -3122,6 +3233,25 @@ function restoreMapScroll(scrollTop){
   requestAnimationFrame(restore);
   setTimeout(restore, 120);
 }
+
+function cityForLocation(location){
+  const text = `${location?.address || ''} ${location?.desc || ''} ${location?.name || ''}`;
+  const direct = ['台北市','新北市','桃園市','台中市','台南市','高雄市','基隆市','新竹市','嘉義市','新竹縣','苗栗縣','彰化縣','南投縣','雲林縣','嘉義縣','屏東縣','宜蘭縣','花蓮縣','台東縣','澎湖縣','金門縣','連江縣'];
+  const hit = direct.find((city) => text.includes(city));
+  if(hit) return hit;
+  const lat = Number(location?.lat ?? HERE.lat);
+  const lng = Number(location?.lng ?? HERE.lng);
+  if(Number.isFinite(lat) && Number.isFinite(lng)){
+    if(lat >= 24.0 && lat <= 24.45 && lng >= 120.35 && lng <= 121.05) return '台中市';
+    if(lat >= 25.0 && lat <= 25.35 && lng >= 121.35 && lng <= 121.75) return '台北市';
+    if(lat >= 24.75 && lat <= 25.35 && lng >= 121.1 && lng <= 122.05) return '新北市';
+    if(lat >= 22.45 && lat <= 23.0 && lng >= 120.15 && lng <= 120.65) return '高雄市';
+    if(lat >= 22.85 && lat <= 23.45 && lng >= 120.0 && lng <= 120.65) return '台南市';
+    if(lat >= 24.55 && lat <= 25.15 && lng >= 120.9 && lng <= 121.55) return '桃園市';
+  }
+  return '目前城市';
+}
+
 function setFilter(k){
   const savedScrollTop = desiredMapListScrollTop();
   currentFilter=k;
@@ -3133,27 +3263,28 @@ function setFilter(k){
 
 function renderList(){
   const list = document.getElementById('locList');
-  const items = LOCATIONS.filter(l=> matchesFilterType(l.type, currentFilter))
+  const items = LOCATIONS.filter(l=> matchesFilterType(l.type, currentFilter) && Number(l.distM) <= NEARBY_RADIUS_M)
                           .slice().sort((a,b)=>a.distSteps-b.distSteps);
-  list.innerHTML = items.map(l=>{
+  if(!items.length){
+    list.innerHTML = `<div class="empty-online" style="margin:10px 16px;">方圓 ${NEARBY_RADIUS_M} 公尺內暫時沒有符合「${FILTERS.find(([key])=>key===currentFilter)?.[1] || '全部'}」的真實地點。</div>`;
+  } else list.innerHTML = items.map(l=>{
     const visited = !!state.visited[l.id];
-    const acc = accessoryFor(l);
     return `
     <div class="loc-card" onclick="openSheet('${l.id}')">
-      <div class="loc-thumb ${visited?'visited':''}" style="background:${l.color}">${acc.icon}</div>
+      <div class="loc-thumb ${visited?'visited':''}" style="background:${l.color}">${iconForType(l.type)}</div>
       <div class="loc-info">
         <div class="loc-name">${l.name}</div>
         <div class="loc-meta">
           <span class="loc-tag" style="background:${l.color}; color:#5c4a2f;">${l.tag}</span>
           <span>約 ${l.distSteps.toLocaleString()} 步・${(l.distM/1000).toFixed(1)} km</span>
         </div>
-        <div class="loc-gift">${visited? '已解鎖：'+acc.name : '解鎖配件：'+acc.name}</div>
+        <div class="loc-gift">${visited ? '已寫入縣市圖鑑' : '到現場認證後，寫入這個縣市的探索紀錄'}</div>
       </div>
       <div class="loc-arrow">›</div>
     </div>`;
   }).join('');
   document.getElementById('visitedCount').textContent = Object.keys(state.visited).length;
-  document.getElementById('totalCount').textContent = LOCATIONS.length;
+  document.getElementById('totalCount').textContent = LOCATIONS.filter(l=>Number(l.distM) <= NEARBY_RADIUS_M).length;
 }
 
 /* ================= DETAIL SHEET ================= */
@@ -3162,7 +3293,6 @@ function openSheet(id){
   activeLocId=id;
   const l = LOCATIONS.find(x=>x.id===id);
   const visited = !!state.visited[id];
-  const acc = accessoryFor(l);
   document.getElementById('sheetContent').innerHTML = `
     <div class="sheet-hero" style="background:linear-gradient(135deg, ${l.color}, #B7C9E0);">
       <span class="tag">${l.tag}${visited?' · 已到訪':''}</span>
@@ -3176,16 +3306,15 @@ function openSheet(id){
         <div class="stat-box"><div class="v">${visited? '已到訪':'未到訪'}</div><div class="l">狀態</div></div>
       </div>
       <div class="gift-box">
-        <div class="icon">${acc.icon}</div>
+        <div class="icon">📖</div>
         <div>
-          <div class="t">首次到訪解鎖地點記憶物</div>
-          <div class="n">${acc.name}</div>
+          <div class="t">真實到訪後寫入縣市圖鑑</div>
+          <div class="n">${cityForLocation(l)}・${l.tag}</div>
         </div>
       </div>
       <a class="nav-link-btn" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=${l.lat},${l.lng}&destination_place_id=${l.placeId}&travelmode=walking">🧭 在 Google Maps 導航前往（真實路線）</a>
       ${visited
-        ? `<button class="btn btn-primary" onclick="openPhotoStage('${id}')">📸 與寵物合照</button>
-           <button class="btn btn-ghost" onclick="closeSheet()">關閉</button>`
+        ? `<button class="btn btn-ghost" onclick="closeSheet()">關閉</button>`
         : `<button class="btn btn-primary" onclick="startCheckin('${id}')">開始到訪認證</button>
            <button class="btn btn-ghost" onclick="closeSheet()">先看看就好</button>`}
     </div>
@@ -3198,25 +3327,67 @@ function closeSheet(e){
   document.getElementById('sheet').classList.remove('open');
 }
 
-/* ================= CHECK-IN SIMULATION ================= */
-function startCheckin(id){
+/* ================= CHECK-IN VERIFICATION ================= */
+async function startCheckin(id){
   const l = LOCATIONS.find(x=>x.id===id);
   document.getElementById('sheetContent').innerHTML = `
     <div class="checkin-panel">
       <div class="ring">📍</div>
       <h3>偵測位置中…</h3>
-      <p>確認你在「${l.name}」周邊約 80 公尺內，並停留一段時間</p>
+      <p>正在確認你是否真的在「${l.name}」周邊 80 公尺內</p>
     </div>`;
-  setTimeout(()=>finishCheckin(id), 2200);
+  try {
+    const pos = await currentPosition({enableHighAccuracy:true, maximumAge:0, timeout:18000});
+    const lat = Number(pos.coords?.latitude);
+    const lng = Number(pos.coords?.longitude);
+    if(!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('裝置沒有回傳有效定位');
+    const distance = haversineSteps(lat, lng, l.lat, l.lng).meters;
+    if(distance > 80){
+      document.getElementById('sheetContent').innerHTML = `
+        <div class="success-panel">
+          <div class="success-badge">📍</div>
+          <h3>還沒到現場</h3>
+          <div class="sub">你目前距離「${l.name}」約 ${distance >= 1000 ? (distance/1000).toFixed(1)+' km' : distance+' m'}，需要進入 80 公尺內才能認證。</div>
+          <a class="nav-link-btn" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=${l.lat},${l.lng}&destination_place_id=${l.placeId}&travelmode=walking">用 Google Maps 導航前往</a>
+          <button class="btn btn-ghost" onclick="openSheet('${id}')">返回地點</button>
+        </div>`;
+      toast('距離太遠，無法到訪認證');
+      return;
+    }
+    HERE.lat = lat;
+    HERE.lng = lng;
+    recomputeDistances();
+    finishCheckin(id, {lat, lng, accuracy: pos.coords?.accuracy ?? null, distance, verified:true});
+  } catch (error) {
+    document.getElementById('sheetContent').innerHTML = `
+      <div class="success-panel">
+        <div class="success-badge">⚠️</div>
+        <h3>無法完成認證</h3>
+        <div class="sub">${escapeHtml(error?.message || '請開啟定位權限後再試一次。')}</div>
+        <button class="btn btn-primary" onclick="startCheckin('${id}')">重新認證</button>
+        <button class="btn btn-ghost" onclick="openSheet('${id}')">返回地點</button>
+      </div>`;
+    toast('到訪認證失敗');
+  }
 }
-function finishCheckin(id){
+function finishCheckin(id, proof = {}){
+  if(!proof.verified){
+    toast('到訪認證需要先完成定位檢查');
+    return;
+  }
   const l = LOCATIONS.find(x=>x.id===id);
-	  const acc = accessoryFor(l);
 	  const firstVisit = !state.visited[id];
-	  state.visited[id] = {date:new Date().toISOString().slice(0,10)};
-	  if(firstVisit && !state.equipped.includes(acc.id)) state.equipped.push(acc.id);
+	  state.visited[id] = {
+	    date:new Date().toISOString().slice(0,10),
+	    city: cityForLocation(l),
+	    distanceM: Math.round(Number(proof.distance || 0)),
+	  };
 	  state.userXp += firstVisit ? 40 : 10;
-	  if(firstVisit) awardHatchPoints(15, '首次到訪');
+	  if(firstVisit){
+	    awardHatchPoints(15, '首次到訪');
+	    unlockAccessory('sprout-pin', '首次到訪');
+	    if(Object.keys(state.visited).length >= 5) unlockAccessory('city-crown', '累積到訪');
+	  }
 	  if(state.hatched) awardPetGrowth(firstVisit ? 32 : 10, '到訪地點');
 	  updateLevels();
 	  persistVisitLog();
@@ -3233,76 +3404,17 @@ function finishCheckin(id){
   renderTop();
   document.getElementById('sheetContent').innerHTML = `
     <div class="success-panel">
-      <div class="success-badge">${acc.icon}</div>
+      <div class="success-badge">📖</div>
       <h3>到訪成功！</h3>
-	      <div class="sub">已寫入「${l.name}」的地點記憶</div>
+	      <div class="sub">已用定位確認你在 80 公尺內，並寫入「${cityForLocation(l)}」圖鑑。</div>
 	      <div class="reward-row">
 	        <div class="reward-chip">🌱 寵物成長 +${firstVisit ? 32 : 10}</div>
-	        <div class="reward-chip">${acc.icon} 解鎖 ${acc.name}</div>
+	        <div class="reward-chip">📖 ${cityForLocation(l)} 探索 +1</div>
 	      </div>
-      <button class="btn btn-primary" onclick="openPhotoStage('${id}')">📸 與寵物合照留念</button>
-      <button class="btn btn-ghost" onclick="closeSheet(); renderList();">稍後再說</button>
+      <button class="btn btn-primary" onclick="closeSheet(); renderList(); renderBook();">完成</button>
     </div>`;
   renderList();
   renderMapMarkers();
-}
-
-/* ================= PHOTO / MEMORY COMPOSER ================= */
-function openPhotoStage(id){
-  const l = LOCATIONS.find(x=>x.id===id);
-  const petVisual = state.hatched ? pet3DHtml(currentPetSpecies(), false) : eggSVG(120, hatchPercent());
-  document.getElementById('sheetContent').innerHTML = `
-    <div class="photo-stage" style="background:linear-gradient(160deg, ${l.color}, #A9C6E8 70%);" id="photoStage">
-      <div class="stage-tag">${l.name}</div>
-      <div class="pet-on-stage" id="dragPet">${petVisual}</div>
-    </div>
-    <div class="photo-caption">拖曳寵物調整位置，捏合可以之後再放大縮小</div>
-    <div class="photo-controls">
-      <button onclick="closeSheet()">重新拍攝</button>
-      <button style="background:var(--leaf); color:#fff;" onclick="saveMemory('${id}')">儲存記憶</button>
-    </div>
-  `;
-  makeDraggable(document.getElementById('dragPet'), document.getElementById('photoStage'));
-}
-function makeDraggable(el, bounds){
-  let dragging=false, offX=0, offY=0;
-  const start=(x,y)=>{dragging=true; const r=el.getBoundingClientRect(); offX=x-r.left; offY=y-r.top; el.style.transform='none'; el.style.cursor='grabbing';};
-  const move=(x,y)=>{
-    if(!dragging) return;
-    const br=bounds.getBoundingClientRect();
-    let nx=x-br.left-offX, ny=y-br.top-offY;
-    nx=Math.max(-20,Math.min(br.width-100,nx));
-    ny=Math.max(-20,Math.min(br.height-100,ny));
-    el.style.left=nx+'px'; el.style.top=ny+'px'; el.style.bottom='auto';
-  };
-  const end=()=>{dragging=false; el.style.cursor='grab';};
-  el.addEventListener('mousedown',e=>start(e.clientX,e.clientY));
-  window.addEventListener('mousemove',e=>move(e.clientX,e.clientY));
-  window.addEventListener('mouseup',end);
-  el.addEventListener('touchstart',e=>{const t=e.touches[0]; start(t.clientX,t.clientY);},{passive:true});
-  window.addEventListener('touchmove',e=>{const t=e.touches[0]; move(t.clientX,t.clientY);},{passive:true});
-  window.addEventListener('touchend',end);
-}
-function saveMemory(id){
-  state.bond = Math.min(100, state.bond+2);
-  state.userXp += 12;
-  if(state.hatched) awardPetGrowth(18, '合照記憶');
-  else {
-    state.petXp += 8;
-    updateLevels();
-    persistPetLog();
-  }
-  renderTop();
-  sharePartyReward({
-    kind: 'memory',
-    title: '合照記憶',
-    sourceName: onlineState.user?.displayName || '隊友',
-    hatchPoints: 2,
-    petGrowth: 6,
-    userXp: 4,
-  });
-  toast('記憶合照已儲存到寵物履歷 📌');
-  closeSheet(); renderList();
 }
 
 /* ================= PET SCREEN ================= */
@@ -3384,15 +3496,15 @@ function renderPet(){
   document.getElementById('bondBar').style.width = state.bond+'%';
 
   const grid = document.getElementById('equipGrid');
-  const allAcc = Object.values(ACC_MAP);
+  const allAcc = ACCESSORIES;
   grid.innerHTML = allAcc.map(a=>{
-    const unlocked = state.equipped.includes(a.id) || wasEverUnlocked(a.id);
+    const unlocked = isAccessoryUnlocked(a.id);
     const on = state.equipped.includes(a.id);
     return `<div class="equip-slot ${unlocked?'':'locked'} ${on?'on':''}" onclick="${unlocked?`toggleEquip('${a.id}')`:''}">
-      <div>${a.icon}</div><div class="tiny">${unlocked?a.name:'未解鎖'}</div>
+      <div>${a.icon}</div><div class="tiny">${unlocked?a.name:a.unlock}</div>
     </div>`;
   }).join('');
-  const unlockedCount = Object.values(ACC_MAP).filter(a=>wasEverUnlocked(a.id)).length;
+  const unlockedCount = ACCESSORIES.filter(a=>isAccessoryUnlocked(a.id)).length;
   document.getElementById('equipCount').textContent = unlockedCount+' / '+allAcc.length+' 已解鎖';
 
   const visitedIds = Object.keys(state.visited);
@@ -3406,30 +3518,41 @@ function renderPet(){
   }).filter(Boolean);
   document.getElementById('bioPlaces').textContent = places.length ? `去過：${places.slice(0, 4).join('、')}${places.length > 4 ? '…' : ''}` : '還沒有到訪紀錄';
 }
-function wasEverUnlocked(accId){
-  return Object.entries(ACC_MAP).some(([locId,a])=> a.id===accId && state.visited[locId]);
-}
 function toggleEquip(accId){
+  if(!isAccessoryUnlocked(accId)){ toast('這個配件尚未解鎖'); return; }
+  if(!state.hatched){ toast('寵物孵化後才能裝備配件'); return; }
   const i = state.equipped.indexOf(accId);
   if(i>=0) state.equipped.splice(i,1); else state.equipped.push(accId);
+  persistVisitLog();
   renderPet();
 }
 
 /* ================= COLLECTION SCREEN ================= */
 function renderBook(){
   const grid = document.getElementById('galGrid');
-  grid.innerHTML = LOCATIONS.map(l=>{
-    const a = accessoryFor(l);
-    const got = !!state.visited[l.id];
-    return `<div class="gcard ${got?'':'locked'}">
-      <div class="lock">${got?'':'🔒'}</div>
-      <div class="ic">${a.icon}</div>
-      <div class="nm">${got?a.name:'？？？'}</div>
-      <div class="from">${l.name}</div>
-    </div>`;
-  }).join('');
-  const gotCount = Object.keys(state.visited).length;
-  document.getElementById('galN').textContent = gotCount+' / '+LOCATIONS.length;
+  const byCity = {};
+  Object.entries(state.visited || {}).forEach(([id, visit]) => {
+    const loc = LOCATIONS.find((item) => item.id === id);
+    const city = visit?.city || cityForLocation(loc);
+    if(!byCity[city]) byCity[city] = { city, count:0, types:new Set(), latest:'' };
+    byCity[city].count += 1;
+    if(loc?.type) byCity[city].types.add(tagForType(loc.type));
+    byCity[city].latest = loc?.name || byCity[city].latest;
+  });
+  const cities = Object.values(byCity);
+  if(!cities.length){
+    grid.innerHTML = `<div class="gcard locked" style="grid-column:1 / -1;"><div class="lock">🔒</div><div class="ic">📖</div><div class="nm">尚未解鎖縣市圖鑑</div><div class="from">到現場完成一次認證後開啟</div></div>`;
+  } else {
+    grid.innerHTML = cities.map((entry)=>`
+      <div class="gcard">
+        <div class="lock"></div>
+        <div class="ic">📍</div>
+        <div class="nm">${entry.city}</div>
+        <div class="from">${entry.count} 個地點・${[...entry.types].slice(0,3).join('、') || '探索'}${entry.types.size > 3 ? '…' : ''}</div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('galN').textContent = String(cities.length);
 }
 
 /* ================= TOP BAR ================= */
@@ -3446,6 +3569,7 @@ function renderTop(){
 	  const growthBig = document.getElementById('growthBig');
 	  if(growthBig) growthBig.textContent = state.petXp.toLocaleString();
 	  persistStepLog();
+	  scheduleUserStatusSync();
 	}
 
 	/* ================= MODALS ================= */
@@ -3472,6 +3596,7 @@ if(!configured){
     quickSignIn(){ window.toast?.('請先設定 Firebase 連線參數'); },
     signOut(){},
     updateDisplayName(){ window.toast?.('請先設定 Firebase 連線參數'); },
+    updateStatus(){},
     addFriendByCode(){ window.toast?.('請先設定 Firebase 連線參數'); },
     updateLocation(){},
     stopSharing(){},
@@ -3802,10 +3927,11 @@ if(!configured){
     visitsUnsub = onValue(ref(db, `visits/${uid}`), (snapshot) => {
       const visits = snapshot.val() || {};
       Object.entries(visits).forEach(([id, visit]) => {
-        state.visited[id] = { date: visit?.date || todayKey(new Date(Number(visit?.visitedAt || Date.now()))) };
         const loc = LOCATIONS.find((item) => item.id === id);
-        const acc = loc ? accessoryFor(loc) : null;
-        if(acc && !state.equipped.includes(acc.id)) state.equipped.push(acc.id);
+        state.visited[id] = {
+          date: visit?.date || todayKey(new Date(Number(visit?.visitedAt || Date.now()))),
+          city: visit?.city || cityForLocation(loc),
+        };
       });
       persistVisitLog();
       renderList();
@@ -3909,6 +4035,25 @@ if(!configured){
         window.toast?.('使用者名稱已更新');
       } catch (error) {
         window.toast?.(`儲存使用者名稱失敗：${firebaseMessage(error)}`);
+      }
+    },
+    async updateStatus(status){
+      if(!currentUser || !status) return;
+      try {
+        await update(ref(db, `users/${currentUser.uid}`), {
+          userLevel: Math.max(1, Math.floor(Number(status.userLevel) || 1)),
+          petLevel: Math.max(1, Math.floor(Number(status.petLevel) || 1)),
+          petName: String(status.petName || '').slice(0, 24),
+          petSpecies: String(status.petSpecies || '').slice(0, 32),
+          petSpeciesName: String(status.petSpeciesName || '').slice(0, 32),
+          petEvolutionStage: Math.max(1, Math.min(3, Math.floor(Number(status.petEvolutionStage) || 1))),
+          petEvolutionLabel: String(status.petEvolutionLabel || '').slice(0, 16),
+          hatched: Boolean(status.hatched),
+          todaySteps: Math.max(0, Math.floor(Number(status.todaySteps) || 0)),
+          statusUpdatedAt: Date.now(),
+        });
+      } catch (error) {
+        console.warn('updateStatus failed', firebaseMessage(error));
       }
     },
     async updateAvatar(photoURL){
@@ -4054,6 +4199,7 @@ if(!configured){
             name: String(location.name || '').slice(0, 80),
             type: String(location.type || ''),
             tag: String(location.tag || ''),
+            city: String(location.city || '').slice(0, 24),
             lat: Number(location.lat),
             lng: Number(location.lng),
             date: location.date || '',
@@ -4080,6 +4226,9 @@ if(!configured){
             tasks: Number(route.tasks || 0),
             steps: Math.max(0, Math.floor(Number(route.steps) || 0)),
             reward: Number(route.reward || 0),
+            review: String(route.review || '').slice(0, 160),
+            reviewed: Boolean(route.reviewed),
+            reviewedAt: Number(route.reviewedAt || 0),
             createdAt: Number(route.createdAt || Date.now()),
             updatedAt: Date.now(),
           },
