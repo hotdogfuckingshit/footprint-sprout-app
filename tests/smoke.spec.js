@@ -1367,6 +1367,40 @@ test('locate me resets map zoom after distant friend bounds', async ({ page }) =
   expect(result.lastCenter).toEqual({ lat: 24.2, lng: 120.7 });
 });
 
+test('locating before Google Maps is ready does not report Places API failure', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(async () => {
+    map = null;
+    window.google = undefined;
+    window.toastMessages = [];
+    const originalToast = window.toast;
+    window.toast = (message) => {
+      window.toastMessages.push(message);
+      originalToast(message);
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: {
+        getCurrentPosition(success) {
+          success({ coords: { latitude: 24.2, longitude: 120.7, accuracy: 10 } });
+        },
+      },
+    });
+    await locateMe();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    return {
+      note: document.getElementById('locateNote').textContent,
+      badge: document.getElementById('mapBadge').textContent,
+      messages: window.toastMessages,
+    };
+  });
+
+  expect(result.note).toContain('地圖還在載入');
+  expect(result.badge).toContain('已定位到你目前的位置');
+  expect(result.messages).toContain('已取得位置，地圖仍在載入');
+  expect(result.messages.join('\n')).not.toContain('附近地點查詢失敗');
+});
+
 test('exiting fullscreen restores normal local map zoom', async ({ page }) => {
   await page.goto('http://localhost:5173');
   const result = await page.evaluate(async () => {

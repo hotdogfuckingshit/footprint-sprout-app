@@ -2718,6 +2718,11 @@ function loadGoogleMaps(retry = false){
   script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=initMap&loading=async`;
   script.async = true;
   script.defer = true;
+  script.onload = () => {
+    setTimeout(() => {
+      if(!map && window.google?.maps?.Map) initMap();
+    }, 250);
+  };
   script.onerror = () => {
     if(mapLoadTimer) clearTimeout(mapLoadTimer);
     setMapLoadState('Google Maps 載入失敗', '請重新整理或確認 Google Cloud 的 Maps JavaScript API、Places API、網域限制仍允許這個網址。', true);
@@ -2782,6 +2787,14 @@ async function fetchNearbyRealPlaces(filter = currentFilter, options = {}){
   const requestedFilter = filter;
   const apiLayer = layerForApi(requestedFilter);
   const savedScrollTop = options.preserveScroll ? desiredMapListScrollTop() : null;
+  if(!map || !window.google?.maps?.places){
+    document.getElementById('locateNote').textContent = '地圖還在載入，載入完成後會同步附近真實地點';
+    loadGoogleMaps();
+    setTimeout(() => {
+      if(map && window.google?.maps?.places) fetchNearbyRealPlaces(requestedFilter, options);
+    }, 1800);
+    return;
+  }
   try {
     document.getElementById('locateNote').textContent = '正在同步附近真實地點...';
     const data = await loadNearbyPlaces(apiLayer);
@@ -2802,6 +2815,11 @@ async function fetchNearbyRealPlaces(filter = currentFilter, options = {}){
     document.getElementById('locateNote').textContent = `已載入 ${places.length} 個附近真實地點，點卡片可看店名與導航`;
     toast(`已同步 ${places.length} 個真實地點`);
   } catch (error) {
+    if(error?.message === 'Google Maps Places library is not ready'){
+      document.getElementById('locateNote').textContent = '地圖還在載入，請稍等或按重試載入地圖';
+      loadGoogleMaps();
+      return;
+    }
     document.getElementById('locateNote').textContent = '附近地點同步失敗，先保留預設探索清單';
     toast('附近地點查詢失敗，請確認 Google key 與 Places API');
   }
@@ -2937,8 +2955,15 @@ async function locateMe(){
     document.getElementById('mapBadge').textContent='📍 已定位到你目前的位置';
     btn.textContent='🎯 定位我';
     if(onlineState.sharing) sendLocationOnce();
-    toast('已取得目前位置');
-    fetchNearbyRealPlaces();
+    if(map && window.google?.maps?.places){
+      toast('已取得目前位置');
+      fetchNearbyRealPlaces();
+    } else {
+      note.textContent = '已取得目前位置；地圖還在載入，載入完成後會同步附近真實地點。';
+      toast('已取得位置，地圖仍在載入');
+      loadGoogleMaps();
+      setTimeout(() => fetchNearbyRealPlaces(), 1800);
+    }
   }, onLocationError, {enableHighAccuracy:true, maximumAge:0, timeout:15000});
 }
 
