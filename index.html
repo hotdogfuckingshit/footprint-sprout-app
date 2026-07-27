@@ -249,37 +249,88 @@ body{
 .lvl-badge{background:var(--coral); color:#fff; font-size:11px; font-weight:800; padding:3px 10px; border-radius:999px;}
 .pet-sub{font-size:12px; color:var(--ink-soft); margin-bottom:14px;}
 .pet-svg-holder{position:relative; height:150px; display:flex; align-items:center; justify-content:center;}
-.pet-svg-holder.pet3d-ready{height:188px; perspective:760px; touch-action:none;}
-.pet3d-model{position:relative; width:156px; height:156px; transform-style:preserve-3d; transform:rotateX(-10deg) rotateY(var(--pet-rot-y, -24deg)); transition:transform .08s linear; filter:drop-shadow(0 18px 16px rgba(28,37,65,.18));}
-.pet3d-model.evo-2{width:168px; height:168px;}
-.pet3d-model.evo-3{width:178px; height:178px; filter:drop-shadow(0 22px 18px rgba(28,37,65,.22));}
-.pet3d-shadow{position:absolute; left:31px; right:31px; bottom:8px; height:16px; border-radius:50%; background:rgba(28,37,65,.12); transform:rotateX(72deg) translateZ(-34px);}
+.pet-svg-holder.pet3d-ready{height:204px; perspective:820px; touch-action:none;}
+.pet3d-model{position:relative; width:176px; height:176px; transform-style:preserve-3d; transform:rotateX(-10deg) rotateY(var(--pet-rot-y, -24deg)); transition:transform .08s linear; filter:drop-shadow(0 18px 16px rgba(28,37,65,.18));}
+.pet3d-model.evo-2{width:184px; height:184px;}
+.pet3d-model.evo-3{width:194px; height:194px; filter:drop-shadow(0 22px 18px rgba(28,37,65,.22));}
+.pet3d-shadow{position:absolute; left:30px; right:30px; bottom:8px; height:18px; border-radius:50%; background:rgba(28,37,65,.13); transform:rotateX(72deg) translateZ(-40px);}
 .pet3d-body,.pet3d-head,.pet3d-belly,.pet3d-eye,.pet3d-mouth,.pet3d-part{position:absolute; transform-style:preserve-3d;}
-.pet3d-body{left:42px; top:50px; width:72px; height:84px; border-radius:44% 44% 38% 38%; background:radial-gradient(circle at 30% 22%, #fff8, transparent 32%), var(--body); box-shadow:inset -16px -18px 28px rgba(0,0,0,.12);}
-.pet3d-head{left:40px; top:16px; width:76px; height:64px; border-radius:45% 45% 42% 42%; background:radial-gradient(circle at 32% 24%, #fff9, transparent 34%), var(--head); box-shadow:inset -13px -15px 22px rgba(0,0,0,.1); transform:translateZ(18px);}
-.pet3d-belly{left:17px; top:42px; width:38px; height:28px; border-radius:50%; background:var(--belly); opacity:.82; transform:translateZ(20px);}
-.pet3d-eye{top:23px; width:8px; height:10px; border-radius:50%; background:#1C2541; transform:translateZ(25px);}
-.pet3d-eye.left{left:22px}.pet3d-eye.right{right:22px}
-.pet3d-mouth{left:32px; top:39px; width:14px; height:7px; border-bottom:3px solid #1C2541; border-radius:0 0 14px 14px; transform:translateZ(26px);}
-.pet3d-part{background:var(--accent); box-shadow:inset -8px -8px 14px rgba(0,0,0,.1);}
-.pet3d-ear{width:24px; height:36px; top:-14px; border-radius:70% 70% 38% 38%; transform-origin:bottom center;}
-.pet3d-ear.left{left:12px; transform:rotateZ(-24deg) translateZ(6px)}
-.pet3d-ear.right{right:12px; transform:rotateZ(24deg) translateZ(6px)}
-.pet3d-tail{width:46px; height:14px; right:-24px; top:72px; border-radius:999px; transform:rotateZ(-18deg) translateZ(-12px)}
-.pet3d-wing{width:40px; height:54px; top:56px; border-radius:80% 24% 80% 24%; opacity:.86; transform:translateZ(-8px)}
+.pet3d-body{left:52px; top:58px; width:78px; height:86px; border-radius:42% 42% 36% 36%; background:radial-gradient(circle at 30% 22%, #fff9, transparent 32%), var(--body); box-shadow:inset -18px -20px 30px rgba(0,0,0,.13);}
+.pet3d-head{left:49px; top:22px; width:80px; height:66px; border-radius:45% 45% 42% 42%; background:radial-gradient(circle at 32% 24%, #fff9, transparent 34%), var(--head); box-shadow:inset -14px -16px 24px rgba(0,0,0,.11); transform:translateZ(20px);}
+.pet3d-belly{left:18px; top:42px; width:42px; height:29px; border-radius:50%; background:var(--belly); opacity:.82; transform:translateZ(22px);}
+.pet3d-eye{top:24px; width:8px; height:10px; border-radius:50%; background:#1C2541; transform:translateZ(28px);}
+.pet3d-eye.left{left:23px}.pet3d-eye.right{right:23px}
+.pet3d-mouth{left:34px; top:40px; width:14px; height:7px; border-bottom:3px solid #1C2541; border-radius:0 0 14px 14px; transform:translateZ(29px);}
+.pet3d-part{background:var(--accent); box-shadow:inset -9px -9px 15px rgba(0,0,0,.12);}
+.pet3d-ear{width:24px; height:38px; top:-16px; border-radius:68% 68% 20% 20%; transform-origin:bottom center; clip-path:polygon(50% 0,100% 100%,0 100%);}
+.pet3d-ear.left{left:12px; transform:rotateZ(-22deg) translateZ(9px)}
+.pet3d-ear.right{right:12px; transform:rotateZ(22deg) translateZ(9px)}
+.pet3d-tail{width:54px; height:16px; right:-28px; top:86px; border-radius:999px; transform:rotateZ(-18deg) translateZ(-14px)}
+.pet3d-tail.curled{width:58px; height:58px; right:-28px; top:56px; border:13px solid var(--accent); border-left-color:transparent; border-radius:50%; background:transparent; box-shadow:inset -4px -4px 8px rgba(0,0,0,.08); transform:rotateZ(-18deg) translateZ(-8px);}
+.pet3d-wing{width:40px; height:56px; top:63px; border-radius:80% 24% 80% 24%; opacity:.86; transform:translateZ(-8px)}
 .pet3d-wing.left{left:8px; transform:rotateZ(-16deg) translateZ(-8px)}
 .pet3d-wing.right{right:8px; transform:rotateZ(16deg) scaleX(-1) translateZ(-8px)}
-.pet3d-fin{width:44px; height:24px; top:76px; border-radius:70% 30% 70% 30%; opacity:.88;}
-.pet3d-fin.left{left:4px; transform:rotateZ(12deg) translateZ(2px)}
-.pet3d-fin.right{right:4px; transform:scaleX(-1) rotateZ(12deg) translateZ(2px)}
-.pet3d-sprout{left:65px; top:-14px; width:28px; height:34px; background:transparent; box-shadow:none; transform:translateZ(22px);}
-.pet3d-sprout:before{content:''; position:absolute; left:12px; top:15px; width:4px; height:22px; border-radius:999px; background:#249A60;}
-.pet3d-sprout:after{content:''; position:absolute; left:2px; top:0; width:24px; height:16px; border-radius:70% 30% 70% 30%; background:var(--accent); transform:rotate(-20deg);}
-.pet3d-crown{left:55px; top:-10px; width:48px; height:24px; background:linear-gradient(135deg,var(--accent),#FFF3B0); clip-path:polygon(0 100%,15% 35%,32% 100%,50% 18%,68% 100%,85% 35%,100% 100%); transform:translateZ(24px);}
-.pet3d-orbit{left:28px; top:74px; width:104px; height:22px; border:4px solid color-mix(in srgb, var(--accent), #fff 42%); border-radius:50%; background:transparent; box-shadow:none; transform:rotateZ(-8deg) translateZ(24px); opacity:.82;}
-.pet3d-horns{top:-12px; width:18px; height:30px; border-radius:70% 70% 20% 20%; transform-origin:bottom center;}
-.pet3d-horns.left{left:20px; transform:rotateZ(-28deg) translateZ(18px)}
-.pet3d-horns.right{right:20px; transform:rotateZ(28deg) translateZ(18px)}
+.pet3d-horn{width:15px; height:34px; border-radius:70% 70% 18% 18%; background:linear-gradient(#FFF7D6,var(--horn)); transform-origin:bottom center;}
+.pet3d-horn.left{left:18px; top:-12px; transform:rotateZ(-24deg) translateZ(22px)}
+.pet3d-horn.right{right:18px; top:-12px; transform:rotateZ(24deg) translateZ(22px)}
+.pet3d-nosehorn{left:33px; top:30px; width:18px; height:28px; border-radius:70% 70% 18% 18%; background:linear-gradient(#FFF7D6,var(--horn)); transform:rotateZ(92deg) translateZ(34px);}
+.pet3d-orbit{left:28px; top:83px; width:118px; height:25px; border:4px solid color-mix(in srgb, var(--accent), #fff 42%); border-radius:50%; background:transparent; box-shadow:none; transform:rotateZ(-8deg) translateZ(32px); opacity:.82;}
+.pet3d-frill{left:30px; top:16px; width:86px; height:66px; border-radius:48% 48% 18% 18%; background:linear-gradient(145deg,var(--accent),var(--body)); clip-path:polygon(7% 100%,0 28%,18% 0,36% 23%,50% 0,64% 23%,82% 0,100% 28%,93% 100%); transform:translateZ(7px);}
+.pet3d-leg{width:17px; height:38px; border-radius:12px 12px 8px 8px; background:linear-gradient(150deg,var(--body),#0001); top:124px;}
+.pet3d-leg.front-left{left:55px; transform:translateZ(25px)}.pet3d-leg.front-right{left:105px; transform:translateZ(25px)}
+.pet3d-leg.back-left{left:38px; transform:translateZ(-14px)}.pet3d-leg.back-right{left:124px; transform:translateZ(-14px)}
+.pet3d-armor{left:48px; top:51px; width:78px; height:22px; background:linear-gradient(135deg,var(--accent),#fff6); clip-path:polygon(0 100%,12% 0,26% 100%,40% 0,54% 100%,68% 0,82% 100%,100% 0,100% 100%); transform:translateZ(27px);}
+.pet3d-saddle{left:74px; top:39px; width:52px; height:38px; border-radius:10px 10px 5px 5px; background:linear-gradient(145deg,var(--gear),#fff4); transform:translateZ(4px);}
+.pet3d-turret{left:86px; top:10px; width:34px; height:38px; border-radius:7px 7px 4px 4px; background:linear-gradient(145deg,var(--gear),var(--accent)); clip-path:polygon(0 100%,0 22%,14% 22%,14% 0,32% 0,32% 22%,50% 22%,50% 0,68% 0,68% 22%,86% 22%,86% 0,100% 0,100% 100%); transform:translateZ(18px);}
+.pet3d-antenna{left:82px; top:-22px; width:13px; height:39px; border-radius:999px; background:linear-gradient(var(--accent),var(--gear)); transform:translateZ(30px);}
+.pet3d-antenna:after{content:''; position:absolute; left:-5px; top:-12px; width:23px; height:23px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff9,transparent 32%),var(--accent);}
+.pet3d-bigeye{top:21px; width:21px; height:21px; border-radius:50%; background:radial-gradient(circle at 45% 45%,#1C2541 0 28%,#fff 30% 61%,var(--gear) 64%); transform:translateZ(31px);}
+.pet3d-bigeye.left{left:19px}.pet3d-bigeye.right{right:19px}
+.pet3d-belt{left:53px; top:104px; width:72px; height:16px; border-radius:999px; background:linear-gradient(90deg,var(--gear),var(--accent)); transform:translateZ(28px);}
+.pet3d-glove{width:27px; height:27px; border-radius:50%; top:91px; background:radial-gradient(circle at 30% 25%,#fff8,transparent 32%),var(--accent);}
+.pet3d-glove.left{left:26px; transform:translateZ(30px)}.pet3d-glove.right{right:26px; transform:translateZ(30px)}
+.pet3d-jetpack{left:26px; top:70px; width:28px; height:54px; border-radius:12px; background:linear-gradient(145deg,var(--gear),#fff4); transform:translateZ(-18px);}
+.pet3d-facet{background:linear-gradient(145deg,var(--head),var(--body)); clip-path:polygon(50% 0,100% 24%,86% 100%,14% 100%,0 24%);}
+.pet3d-facetmask{left:20px; top:19px; width:53px; height:28px; background:linear-gradient(145deg,var(--accent),#fff4); clip-path:polygon(0 0,50% 34%,100% 0,82% 100%,18% 100%); transform:translateZ(33px);}
+.pet3d-mane{left:45px; top:18px; width:88px; height:52px; background:linear-gradient(135deg,var(--accent),var(--head)); clip-path:polygon(0 48%,20% 10%,38% 52%,54% 0,70% 52%,88% 12%,100% 48%,78% 100%,22% 100%); transform:translateZ(18px);}
+.pet3d-crystal{width:20px; height:38px; background:linear-gradient(145deg,#fff9,var(--accent)); clip-path:polygon(50% 0,100% 32%,70% 100%,30% 100%,0 32%);}
+.pet3d-crystal.one{right:16px; top:68px; transform:rotateZ(22deg) translateZ(18px)}.pet3d-crystal.two{left:19px; top:75px; transform:rotateZ(-24deg) translateZ(18px)}
+.pet3d-arm{width:19px; height:50px; border-radius:999px; background:linear-gradient(145deg,var(--body),#0001); top:80px;}
+.pet3d-arm.left{left:32px; transform:rotateZ(26deg) translateZ(24px)}.pet3d-arm.right{right:32px; transform:rotateZ(-26deg) translateZ(24px)}
+.pet3d-fist{width:32px; height:30px; border-radius:50%; background:radial-gradient(circle at 30% 25%,#fff7,transparent 32%),var(--accent); top:95px;}
+.pet3d-fist.left{left:14px; transform:translateZ(34px)}.pet3d-fist.right{right:14px; transform:translateZ(34px)}
+.pet3d-claw{width:13px; height:24px; border-radius:80% 80% 12% 12%; background:var(--horn); top:120px;}
+.pet3d-claw.left{left:22px; transform:rotateZ(-15deg) translateZ(40px)}.pet3d-claw.right{right:22px; transform:rotateZ(15deg) translateZ(40px)}
+.pet3d-shoulder{width:28px; height:28px; background:linear-gradient(145deg,var(--accent),#fff6); clip-path:polygon(50% 0,100% 100%,0 100%); top:70px;}
+.pet3d-shoulder.left{left:33px; transform:rotateZ(-18deg) translateZ(27px)}.pet3d-shoulder.right{right:33px; transform:rotateZ(18deg) translateZ(27px)}
+.pet3d-aura{left:34px; top:24px; width:112px; height:112px; border:5px dashed color-mix(in srgb,var(--accent),#fff 35%); border-radius:50%; background:transparent; box-shadow:none; opacity:.55; transform:rotateZ(20deg) translateZ(-22px);}
+.pet3d-button-eye{top:23px; width:18px; height:18px; border-radius:50%; background:var(--gear); border:3px solid var(--accent); transform:translateZ(31px);}
+.pet3d-button-eye:before,.pet3d-button-eye:after{content:''; position:absolute; left:2px; right:2px; top:6px; height:2px; background:#1C2541; transform:rotate(45deg);}
+.pet3d-button-eye:after{transform:rotate(-45deg);}
+.pet3d-button-eye.left{left:19px}.pet3d-button-eye.right{right:19px}
+.pet3d-stitches{left:36px; top:18px; width:5px; height:66px; border-radius:999px; background:repeating-linear-gradient(180deg,#1C2541 0 5px,transparent 5px 10px); transform:translateZ(32px);}
+.pet3d-scarf{left:48px; top:75px; width:82px; height:20px; border-radius:999px 999px 7px 7px; background:linear-gradient(90deg,var(--accent),var(--gear)); transform:translateZ(34px);}
+.pet3d-cap{left:47px; top:-14px; width:84px; height:30px; background:linear-gradient(145deg,var(--gear),#fff5); clip-path:polygon(50% 0,100% 45%,50% 90%,0 45%); transform:translateZ(35px);}
+.pet3d-diploma{right:13px; top:92px; width:48px; height:15px; border-radius:999px; background:#FFF7D6; border:3px solid var(--accent); transform:rotateZ(-18deg) translateZ(40px);}
+.pet3d-bookwing{width:42px; height:58px; top:68px; border-radius:8px; background:linear-gradient(120deg,#FFF7D6,var(--belly)); border:3px solid var(--accent); opacity:.94;}
+.pet3d-bookwing.left{left:13px; transform:rotateZ(-16deg) translateZ(-12px)}.pet3d-bookwing.right{right:13px; transform:rotateZ(16deg) translateZ(-12px)}
+.model-hornback .pet3d-body{left:44px; top:75px; width:100px; height:58px; border-radius:46% 52% 38% 38%; transform:translateZ(0);}
+.model-hornback .pet3d-head{left:16px; top:42px; width:70px; height:62px; border-radius:48% 34% 40% 36%; transform:translateZ(34px);}
+.model-hornback .pet3d-belly{display:none}.model-hornback .pet3d-eye{top:25px; width:7px; height:8px}.model-hornback .pet3d-eye.left{left:29px}.model-hornback .pet3d-eye.right{right:20px}
+.model-starbot .pet3d-body{left:54px; top:66px; width:70px; height:72px; border-radius:34px 34px 24px 24px;}
+.model-starbot .pet3d-head{left:43px; top:24px; width:92px; height:58px; border-radius:54% 54% 42% 42%;}
+.model-starbot .pet3d-eye{display:none}.model-starbot .pet3d-mouth{left:39px; top:40px; width:18px;}
+.model-polyfox .pet3d-body{left:62px; top:71px; width:58px; height:82px; border-radius:0; clip-path:polygon(18% 0,82% 0,100% 64%,70% 100%,30% 100%,0 64%);}
+.model-polyfox .pet3d-head{left:43px; top:26px; width:92px; height:62px; border-radius:0; clip-path:polygon(50% 0,100% 32%,78% 100%,22% 100%,0 32%);}
+.model-polyfox .pet3d-belly{border-radius:0; clip-path:polygon(50% 0,100% 45%,70% 100%,30% 100%,0 45%);}
+.model-polyfox .pet3d-tail{width:68px; height:44px; right:-32px; top:93px; border-radius:0; clip-path:polygon(8% 44%,76% 0,100% 48%,78% 100%,0 70%);}
+.model-brawlercat .pet3d-body{left:56px; top:66px; width:68px; height:86px; border-radius:45% 45% 38% 38%;}
+.model-brawlercat .pet3d-head{left:43px; top:20px; width:88px; height:64px; border-radius:48% 48% 40% 40%;}
+.model-brawlercat .pet3d-belly{width:48px; height:54px; left:10px; top:30px; border-radius:34%;}
+.model-brawlercat .pet3d-tail{width:70px; height:18px; right:-37px; top:55px; transform:rotateZ(-65deg) translateZ(-10px);}
+.model-scholar .pet3d-body{left:57px; top:68px; width:66px; height:83px; border-radius:26px 26px 22px 22px;}
+.model-scholar .pet3d-head{left:40px; top:24px; width:96px; height:70px; border-radius:46% 46% 40% 40%;}
+.model-scholar .pet3d-eye{display:none}.model-scholar .pet3d-mouth{left:40px; top:44px; width:18px; border-bottom-style:dashed;}
 .pet3d-accessories{position:absolute; left:18px; right:18px; bottom:2px; display:flex; justify-content:center; gap:5px; transform:translateZ(46px); pointer-events:none;}
 .pet3d-accessory{width:24px; height:24px; border-radius:999px; background:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; box-shadow:0 5px 12px rgba(28,37,65,.18);}
 .pet-species-note{font-size:11px; color:var(--ink-soft); margin-top:6px; font-weight:800;}
@@ -2904,55 +2955,56 @@ function eggSVG(size, progress = 0){
   </svg>`;
 }
 
-function petSVG(size, color, accessories){
-  const wearHat = accessories.includes('lantern') || accessories.includes('icecream');
-  const wearGlasses = accessories.includes('glasses');
-  const wearCape = accessories.includes('maple');
-  const wearBack = accessories.includes('book') || accessories.includes('window');
-  const wearHold = accessories.includes('coffee') || accessories.includes('scope');
-  return `
-  <svg width="${size}" height="${size}" viewBox="0 0 200 200">
-    ${wearCape?`<path d="M60 90 Q100 180 140 90 L120 80 Q100 130 80 80 Z" fill="#E4574B"/>`:''}
-    ${wearBack?`<ellipse cx="150" cy="110" rx="18" ry="24" fill="#7C5CFC" opacity="0.9"/>`:''}
-    <ellipse cx="100" cy="175" rx="46" ry="9" fill="#000" opacity="0.08"/>
-    <path d="M100 30 C150 30 172 78 165 118 C160 155 132 172 100 172 C68 172 40 155 35 118 C28 78 50 30 100 30 Z" fill="${color}"/>
-    <path d="M100 30 C150 30 172 78 165 118 C160 155 132 172 100 172 C68 172 40 155 35 118 C28 78 50 30 100 30 Z" fill="url(#shine)" opacity="0.5"/>
-    <defs><radialGradient id="shine" cx="35%" cy="25%" r="70%"><stop offset="0%" stop-color="#fff" stop-opacity="0.55"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
-    <circle cx="78" cy="98" r="9" fill="#1C2541"/>
-    <circle cx="122" cy="98" r="9" fill="#1C2541"/>
-    <circle cx="81" cy="95" r="2.6" fill="#fff"/>
-    <circle cx="125" cy="95" r="2.6" fill="#fff"/>
-    <path d="M85 120 Q100 132 115 120" stroke="#1C2541" stroke-width="4" fill="none" stroke-linecap="round"/>
-    <circle cx="62" cy="112" r="8" fill="#FF9A8D" opacity="0.7"/>
-    <circle cx="138" cy="112" r="8" fill="#FF9A8D" opacity="0.7"/>
-    <path d="M45 60 Q30 40 40 20" stroke="${color}" stroke-width="10" fill="none" stroke-linecap="round"/>
-    <path d="M155 60 Q170 40 160 20" stroke="${color}" stroke-width="10" fill="none" stroke-linecap="round"/>
-    ${wearGlasses?`<circle cx="78" cy="98" r="13" fill="none" stroke="#1C2541" stroke-width="3"/><circle cx="122" cy="98" r="13" fill="none" stroke="#1C2541" stroke-width="3"/><line x1="91" y1="98" x2="109" y2="98" stroke="#1C2541" stroke-width="3"/>`:''}
-    ${wearHat?`<path d="M62 42 Q100 8 138 42 L132 50 Q100 26 68 50 Z" fill="#FFC93C"/><circle cx="100" cy="18" r="7" fill="#FF6B5B"/>`:''}
-    ${wearHold?`<circle cx="45" cy="130" r="12" fill="#fff" stroke="#D9822B" stroke-width="3"/>`:''}
-	  </svg>`;
-	}
-
 const PET_SPECIES = [
   {
-    id:'mossling', name:'苔芽獸', body:'#6CCB7F', head:'#7DDA8A', belly:'#FFF3B0', accent:'#2FB16D', trait:'頭頂會長出小芽，喜歡公園和雨後牆角。',
-    forms:[{name:'芽種幼體', parts:['sprout']}, {name:'苔葉成長體', parts:['sprout','tail']}, {name:'森冠完全體', parts:['sprout','tail','crown','orbit']}],
+    id:'hornback', model:'hornback', name:'角甲獸',
+    body:'#9C9A91', head:'#B8B7AF', belly:'#DCD7C7', accent:'#6E7F9B', gear:'#7B8794', horn:'#EEE4C7',
+    trait:'厚重四足、額角與頭盾是主要特徵，進化後背上會長出探索用甲座。',
+    forms:[
+      {name:'小角幼體', parts:['frill','horns','nosehorn','legs']},
+      {name:'甲背成長體', parts:['frill','horns','nosehorn','legs','armor','saddle']},
+      {name:'城堡完全體', parts:['frill','horns','nosehorn','legs','armor','saddle','turret','orbit']},
+    ],
   },
   {
-    id:'lanternpup', name:'燈絨獸', body:'#FFB35C', head:'#FFC77A', belly:'#FFF1D0', accent:'#FF6B5B', trait:'耳朵像小燈籠，完成招牌與夜間街景任務時特別活躍。',
-    forms:[{name:'微光幼體', parts:['ears']}, {name:'街燈成長體', parts:['ears','tail']}, {name:'燈冠完全體', parts:['ears','tail','crown','orbit']}],
+    id:'starbot', model:'starbot', name:'星眼小怪',
+    body:'#C4C0B5', head:'#D8D5CC', belly:'#EEE6D1', accent:'#7A8FE8', gear:'#8A8178', horn:'#F1DFB4',
+    trait:'大眼、短手與天線像玩具外星人，會把走過的路轉成星點訊號。',
+    forms:[
+      {name:'天線幼體', parts:['antenna','bigEyes']},
+      {name:'腰帶成長體', parts:['antenna','bigEyes','belt','gloves']},
+      {name:'噴射完全體', parts:['antenna','bigEyes','belt','gloves','jetpack','orbit']},
+    ],
   },
   {
-    id:'drizzlefin', name:'雨鰭獸', body:'#63C7D8', head:'#8FDEF0', belly:'#EAFBFF', accent:'#4B8BFF', trait:'身側有透明鰭片，擅長記住河道、天橋與潮濕街景。',
-    forms:[{name:'水滴幼體', parts:['fins']}, {name:'雨鰭成長體', parts:['fins','tail']}, {name:'潮冠完全體', parts:['fins','tail','crown','orbit']}],
+    id:'polyfox', model:'polyfox', name:'稜面狐',
+    body:'#7E8482', head:'#979C99', belly:'#BDC2BD', accent:'#565E5F', gear:'#A9A79E', horn:'#D7D2C1',
+    trait:'低面數位狐，尖耳、稜角臉和厚尾巴會隨任務長出晶化紋路。',
+    forms:[
+      {name:'灰稜幼體', parts:['ears','tail']},
+      {name:'面甲成長體', parts:['ears','tail','mane','facetMask']},
+      {name:'晶尾完全體', parts:['ears','tail','mane','facetMask','crystals','orbit']},
+    ],
   },
   {
-    id:'bookmoth', name:'頁翼獸', body:'#B79CFF', head:'#D2C3FF', belly:'#FFF7D8', accent:'#7C5CFC', trait:'背後有書頁狀翅膀，會把路線整理成圖鑑回憶。',
-    forms:[{name:'紙頁幼體', parts:['wings']}, {name:'頁翼成長體', parts:['wings','ears']}, {name:'典藏完全體', parts:['wings','ears','crown','orbit']}],
+    id:'brawlercat', model:'brawlercat', name:'拳尾貓',
+    body:'#8F8D88', head:'#A7A39C', belly:'#CBC3B5', accent:'#5D6575', gear:'#7D7870', horn:'#E6DDC5',
+    trait:'戰鬥姿態、拳頭、尖耳和長尾是核心輪廓，進化後會出現肩甲與爪刃。',
+    forms:[
+      {name:'拳爪幼體', parts:['ears','tail','arms','fists']},
+      {name:'肩甲成長體', parts:['ears','tail','arms','fists','shoulders','claws']},
+      {name:'鬥氣完全體', parts:['ears','tail','arms','fists','shoulders','claws','aura','orbit']},
+    ],
   },
   {
-    id:'windspore', name:'風孢靈', body:'#9FD6B8', head:'#D7F3DE', belly:'#F8FFD8', accent:'#FFC93C', trait:'會收集路口風向與街角氣味，適合長距離散步路線。',
-    forms:[{name:'孢點幼體', parts:['tail']}, {name:'風旋成長體', parts:['tail','fins']}, {name:'風環完全體', parts:['tail','fins','horns','orbit']}],
+    id:'scholarplush', model:'scholar', name:'學士布偶',
+    body:'#6F6A54', head:'#D7A78F', belly:'#EFE0C7', accent:'#C96D5A', gear:'#4E5140', horn:'#F1E5C8',
+    trait:'鈕扣眼、縫線、方帽與卷軸是主要造型，適合收藏城市圖鑑與旅程評語。',
+    forms:[
+      {name:'縫線幼體', parts:['buttonEyes','stitches','ears','scarf']},
+      {name:'方帽成長體', parts:['buttonEyes','stitches','ears','scarf','cap','diploma']},
+      {name:'典籍完全體', parts:['buttonEyes','stitches','ears','scarf','cap','diploma','bookWings','orbit']},
+    ],
   },
 ];
 
@@ -2977,18 +3029,37 @@ function pet3DHtml(species = currentPetSpecies(), includeNote = true){
   const parts = new Set(form.parts || []);
   const part = (name, className) => parts.has(name) ? `<i class="pet3d-part ${className}"></i>` : '';
   const equipped = state.equipped.map((id) => ACCESSORY_MAP[id]).filter(Boolean).slice(0, 4);
+  const model = species.model || 'hornback';
   return `
-    <div class="pet3d-model evo-${state.petEvolutionStage}" data-testid="pet-3d-model" style="--body:${species.body};--head:${species.head};--belly:${species.belly};--accent:${species.accent};">
+    <div class="pet3d-model model-${model} evo-${state.petEvolutionStage}" data-testid="pet-3d-model" style="--body:${species.body};--head:${species.head};--belly:${species.belly};--accent:${species.accent};--gear:${species.gear || species.accent};--horn:${species.horn || '#F1E5C8'};">
       <i class="pet3d-shadow"></i>
-      ${part('wings','pet3d-wing left')}${part('wings','pet3d-wing right')}
+      ${part('bookWings','pet3d-bookwing left')}${part('bookWings','pet3d-bookwing right')}
+      ${part('jetpack','pet3d-jetpack')}
+      ${part('aura','pet3d-aura')}
       <i class="pet3d-body"></i>
+      ${part('armor','pet3d-armor')}${part('saddle','pet3d-saddle')}${part('turret','pet3d-turret')}
+      ${part('belt','pet3d-belt')}
+      ${part('arms','pet3d-arm left')}${part('arms','pet3d-arm right')}
+      ${part('fists','pet3d-fist left')}${part('fists','pet3d-fist right')}
+      ${part('gloves','pet3d-glove left')}${part('gloves','pet3d-glove right')}
+      ${part('shoulders','pet3d-shoulder left')}${part('shoulders','pet3d-shoulder right')}
       <i class="pet3d-head">
-        ${part('ears','pet3d-ear left')}${part('ears','pet3d-ear right')}${part('sprout','pet3d-sprout')}
-        ${part('horns','pet3d-horns left')}${part('horns','pet3d-horns right')}${part('crown','pet3d-crown')}
+        ${part('frill','pet3d-frill')}${part('mane','pet3d-mane')}
+        ${part('ears','pet3d-ear left')}${part('ears','pet3d-ear right')}
+        ${part('horns','pet3d-horn left')}${part('horns','pet3d-horn right')}${part('nosehorn','pet3d-nosehorn')}
+        ${part('antenna','pet3d-antenna')}${part('cap','pet3d-cap')}
         <i class="pet3d-belly"></i>
+        ${part('bigEyes','pet3d-bigeye left')}${part('bigEyes','pet3d-bigeye right')}
+        ${part('buttonEyes','pet3d-button-eye left')}${part('buttonEyes','pet3d-button-eye right')}
+        ${part('facetMask','pet3d-facetmask')}
+        ${part('stitches','pet3d-stitches')}
         <i class="pet3d-eye left"></i><i class="pet3d-eye right"></i><i class="pet3d-mouth"></i>
       </i>
-      ${part('fins','pet3d-fin left')}${part('fins','pet3d-fin right')}${part('tail','pet3d-tail')}
+      ${part('legs','pet3d-leg front-left')}${part('legs','pet3d-leg front-right')}${part('legs','pet3d-leg back-left')}${part('legs','pet3d-leg back-right')}
+      ${parts.has('tail') ? `<i class="pet3d-part pet3d-tail ${model === 'starbot' ? 'curled' : ''}"></i>` : ''}
+      ${part('claws','pet3d-claw left')}${part('claws','pet3d-claw right')}
+      ${part('crystals','pet3d-crystal one')}${part('crystals','pet3d-crystal two')}
+      ${part('scarf','pet3d-scarf')}${part('diploma','pet3d-diploma')}
       ${part('orbit','pet3d-orbit')}
       ${equipped.length ? `<span class="pet3d-accessories">${equipped.map((item) => `<i class="pet3d-accessory" title="${escapeHtml(item.name)}">${item.icon}</i>`).join('')}</span>` : ''}
     </div>

@@ -147,9 +147,15 @@ test('pet hatches into one of five 3-stage rotatable 3D species and item generat
   const speciesMeta = await page.evaluate(() => ({
     speciesCount: PET_SPECIES.length,
     formCounts: PET_SPECIES.map((species) => species.forms.length),
+    ids: PET_SPECIES.map((species) => species.id),
+    models: PET_SPECIES.map((species) => species.model),
+    names: PET_SPECIES.map((species) => species.name),
   }));
   expect(speciesMeta.speciesCount).toBe(5);
   expect(speciesMeta.formCounts).toEqual([3, 3, 3, 3, 3]);
+  expect(speciesMeta.ids).toEqual(['hornback', 'starbot', 'polyfox', 'brawlercat', 'scholarplush']);
+  expect(speciesMeta.models).toEqual(['hornback', 'starbot', 'polyfox', 'brawlercat', 'scholar']);
+  expect(speciesMeta.names).toEqual(['角甲獸', '星眼小怪', '稜面狐', '拳尾貓', '學士布偶']);
 
   const hatchResult = await page.evaluate(() => {
     state.hatchPoints = 95;
@@ -167,6 +173,7 @@ test('pet hatches into one of five 3-stage rotatable 3D species and item generat
   await page.locator('.navbtn[data-tab="pet"]').click();
   await expect(page.locator('#screen-pet')).toHaveClass(/active/);
   await expect(page.getByTestId('pet-3d-model')).toBeVisible();
+  await expect(page.getByTestId('pet-3d-model')).toHaveClass(/model-(hornback|starbot|polyfox|brawlercat|scholar)/);
   await expect(page.locator('#petLevel')).not.toHaveText('孵化中');
   await expect(page.locator('#evoSummary .evo-chip')).toHaveCount(3);
   const before = await page.getByTestId('pet-3d-model').evaluate((el) => getComputedStyle(el).getPropertyValue('--pet-rot-y'));
