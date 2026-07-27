@@ -1508,6 +1508,7 @@ test('map initializes visibly without pressing locate first', async ({ page }) =
           constructor(element, options) {
             this.elementId = element.id;
             this.options = options;
+            element.innerHTML = '';
           }
           setCenter(value) { window.centerCalls.push(value); }
           setZoom(value) { window.zoomCalls.push(value); }
@@ -1553,6 +1554,66 @@ test('map initializes visibly without pressing locate first', async ({ page }) =
   expect(result.loadText).not.toContain('地圖載入中');
   expect(result.mapHeight).toBe('210px');
   expect(result.mapMinHeight).toBe('210px');
+});
+
+test('home startup recovers empty quest card and initializes map without locating', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(async () => {
+    map = null;
+    userMarker = null;
+    mapMarkers = [];
+    questState.active = true;
+    questState.completed = false;
+    questState.route = [];
+    questState.taskIndex = 0;
+    document.getElementById('questCard').innerHTML = '';
+    document.getElementById('map').innerHTML = '<div class="map-load-state"><b>地圖載入中...</b></div>';
+    window.centerCalls = [];
+    window.resizeEvents = [];
+    window.google = {
+      maps: {
+        SymbolPath: { CIRCLE: 'circle' },
+        Map: class Map {
+          constructor(element, options) {
+            this.elementId = element.id;
+            this.options = options;
+            element.innerHTML = '';
+          }
+          setCenter(value) { window.centerCalls.push(value); }
+          setZoom() {}
+          getZoom() { return 14; }
+          panBy() {}
+        },
+        Marker: class Marker {
+          constructor(options) { this.options = options; }
+          setMap() {}
+          addListener() {}
+        },
+        event: {
+          trigger(_map, name) { window.resizeEvents.push(name); },
+          addListenerOnce(_map, _name, callback) { setTimeout(callback, 0); },
+        },
+      },
+    };
+    ensureHomeScreenReady();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    return {
+      questText: document.getElementById('questCard').textContent,
+      questActive: questState.active,
+      mapElement: map?.elementId,
+      loadText: document.getElementById('map').textContent,
+      center: window.centerCalls.at(-1),
+      resizeCount: window.resizeEvents.filter((name) => name === 'resize').length,
+    };
+  });
+
+  expect(result.questActive).toBe(false);
+  expect(result.questText).toContain('空堂盲盒探索');
+  expect(result.questText).toContain('開始盲盒路線');
+  expect(result.mapElement).toBe('map');
+  expect(result.loadText).not.toContain('地圖載入中');
+  expect(result.center).toEqual({ lat: 24.1815, lng: 120.6449 });
+  expect(result.resizeCount).toBeGreaterThan(0);
 });
 
 test('exiting fullscreen restores normal local map zoom', async ({ page }) => {

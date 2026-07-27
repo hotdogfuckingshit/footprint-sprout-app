@@ -1490,6 +1490,14 @@ function explainRouteSelection(location, distanceM){
 function renderQuest(){
   const card = document.getElementById('questCard');
   if(!card) return;
+  if(questState.active && (!Array.isArray(questState.route) || !questState.route.length || !questState.route[questState.taskIndex])){
+    questState.active = false;
+    questState.completed = false;
+    questState.route = [];
+    questState.taskIndex = 0;
+    questState.phase = 'setup';
+    questState.validation = null;
+  }
   if(!questState.active && !questState.completed){
     card.innerHTML = `
       <div class="quest-head">
@@ -2799,6 +2807,8 @@ let pendingMapExitTimer = null;
 let mapTouchGesture = null;
 let initialMapStabilized = false;
 let safariMapWakeupsBound = false;
+let mapStartupWatchdogBound = false;
+let mapScriptRetryCount = 0;
 
 function focusOwnLocation(zoom = USER_LOCATION_ZOOM){
   if(!map) return;
@@ -2890,7 +2900,10 @@ function bindSafariMapWakeups(){
   if(safariMapWakeupsBound) return;
   safariMapWakeupsBound = true;
   const wake = () => {
-    [0, 120, 420, 900].forEach((delay) => setTimeout(() => stabilizeMapViewport({forceZoom: delay === 0}), delay));
+    [0, 120, 420, 900].forEach((delay) => setTimeout(() => {
+      ensureMapStartup('wake');
+      stabilizeMapViewport({forceZoom: delay === 0});
+    }, delay));
   };
   window.addEventListener('pageshow', wake);
   window.addEventListener('load', wake);
@@ -2900,6 +2913,51 @@ function bindSafariMapWakeups(){
     if(document.visibilityState === 'visible') wake();
   });
   window.visualViewport?.addEventListener?.('resize', wake);
+}
+
+function scheduleMapScriptWatchdog(){
+  [1600, 3600, 7000].forEach((delay) => {
+    setTimeout(() => {
+      if(map) return;
+      if(window.google?.maps?.Map){
+        initMap();
+        return;
+      }
+      const script = document.getElementById('googleMapsScript');
+      if(script && mapScriptRetryCount < 2){
+        mapScriptRetryCount++;
+        loadGoogleMaps(true);
+      }
+    }, delay);
+  });
+}
+
+function ensureMapStartup(_reason = 'startup'){
+  ensureMapElementLayout();
+  if(map){
+    stabilizeMapViewport();
+    return;
+  }
+  if(window.google?.maps?.Map){
+    initMap();
+    return;
+  }
+  loadGoogleMaps();
+}
+
+function bindMapStartupWatchdog(){
+  if(mapStartupWatchdogBound) return;
+  mapStartupWatchdogBound = true;
+  const wake = () => {
+    [0, 250, 900, 1800, 3600].forEach((delay) => setTimeout(() => ensureMapStartup('startup-watchdog'), delay));
+  };
+  window.addEventListener('pageshow', wake);
+  window.addEventListener('load', wake);
+  window.addEventListener('focus', wake);
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible') wake();
+  });
+  wake();
 }
 
 function toggleMapFullscreen(force){
@@ -3042,7 +3100,10 @@ function loadGoogleMaps(retry = false){
   }
   const existing = document.getElementById('googleMapsScript');
   if(existing){
-    if(!retry) return;
+    if(!retry){
+      scheduleMapScriptWatchdog();
+      return;
+    }
     existing.remove();
   }
   setMapLoadState('地圖載入中...', '如果網路或瀏覽器暫時擋住 Google Maps，稍等一下或按重試。');
@@ -3064,6 +3125,7 @@ function loadGoogleMaps(retry = false){
     if(!map) setMapLoadState('Google Maps 載入較慢', '這通常是手機網路、瀏覽器 WebView 或 Google script 暫時沒有回應；API key 本身若可用，按重試即可重新載入。', true);
   }, 12000);
   document.head.appendChild(script);
+  scheduleMapScriptWatchdog();
 }
 
 function renderMapMarkers(){
@@ -4131,16 +4193,38 @@ function renderTop(){
 	function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
 
 /* ================= INIT ================= */
-renderFilters();
-renderList();
-renderTop();
-renderPet();
-renderProfile();
-renderOnline();
-renderQuest();
-renderReviews();
-loadGoogleMaps();
-setTimeout(handleNotificationLaunch, 0);
+function safeInitStep(label, fn){
+  try {
+    fn();
+  } catch (error) {
+    console.error(`[Footprint Sprout] ${label} failed`, error);
+  }
+}
+
+function ensureHomeScreenReady(){
+  safeInitStep('renderQuest', renderQuest);
+  safeInitStep('ensureMapStartup', ensureMapStartup);
+}
+
+function initializeApp(){
+  safeInitStep('renderFilters', renderFilters);
+  safeInitStep('renderList', renderList);
+  safeInitStep('renderTop', renderTop);
+  safeInitStep('renderPet', renderPet);
+  safeInitStep('renderProfile', renderProfile);
+  safeInitStep('renderOnline', renderOnline);
+  safeInitStep('renderReviews', renderReviews);
+  ensureHomeScreenReady();
+  bindMapStartupWatchdog();
+  setTimeout(() => {
+    ensureHomeScreenReady();
+    safeInitStep('handleNotificationLaunch', handleNotificationLaunch);
+  }, 0);
+}
+
+initializeApp();
+window.addEventListener('pageshow', ensureHomeScreenReady);
+window.addEventListener('load', ensureHomeScreenReady);
 </script>
 <script type="module">
 const firebaseConfig = window.FOOTPRINT_FIREBASE_CONFIG || {};
