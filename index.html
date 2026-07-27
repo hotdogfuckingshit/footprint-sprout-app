@@ -194,12 +194,17 @@ body{
 .sheet-overlay{position:absolute; inset:0; background:rgba(28,37,65,0.45); z-index:80; opacity:0; pointer-events:none; transition:opacity .2s;}
 .sheet-overlay.open{opacity:1; pointer-events:auto;}
 .sheet{
-  position:absolute; left:0; right:0; bottom:0; background:var(--paper); border-radius:28px 28px 0 0;
+  position:absolute; left:max(10px, env(safe-area-inset-left)); right:max(10px, env(safe-area-inset-right)); bottom:0; background:var(--paper); border-radius:28px 28px 0 0;
   transform:translateY(100%); transition:transform .28s cubic-bezier(.2,.9,.3,1); z-index:90;
-  max-height:88%; overflow-y:auto; padding-bottom:24px;
+  max-height:88%; overflow-y:auto; padding-bottom:calc(24px + env(safe-area-inset-bottom));
 }
 .sheet.open{transform:translateY(0);}
 .sheet-handle{width:40px;height:5px;background:var(--line); border-radius:99px; margin:10px auto 4px;}
+.sheet-head{display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:8px 18px 6px;}
+.sheet-head > div{min-width:0;}
+.sheet-head .tag{display:inline-flex; align-items:center; min-height:24px; padding:3px 10px; border-radius:999px; background:#EEF8FF; color:var(--leaf-dark); font-size:11px; font-weight:900;}
+.sheet-head h2{margin:8px 0 6px; font-size:24px; line-height:1.18; color:var(--ink); font-weight:900; overflow-wrap:anywhere; word-break:break-word;}
+.sheet-head p{margin:0; color:var(--ink-soft); font-size:13px; line-height:1.55; overflow-wrap:anywhere;}
 .sheet-hero{height:130px; margin:10px 16px 0; border-radius:20px; display:flex; align-items:flex-end; padding:14px; position:relative; overflow:hidden;}
 .sheet-hero .tag{position:absolute; top:12px; left:12px; background:rgba(255,255,255,0.85); font-size:11px; font-weight:800; padding:4px 10px; border-radius:999px; color:var(--ink);}
 .sheet-hero h2{color:#fff; margin:0; font-size:19px; font-weight:900; text-shadow:0 2px 8px rgba(0,0,0,0.25);}
@@ -430,8 +435,11 @@ body{
 .character-option.on{background:#EAFBF3; border-color:var(--leaf); color:var(--leaf-dark);}
 .character-save-row{display:grid; grid-template-columns:1fr; gap:6px; margin-top:2px;}
 .friend-card{cursor:pointer;}
-.friend-profile-sheet{display:grid; gap:12px;}
+.friend-profile-sheet{display:grid; gap:12px; padding:0 18px 22px;}
+.friend-profile-sheet > .sheet-head{padding-left:0; padding-right:0;}
 .friend-profile-sheet .profile-home{margin:0; box-shadow:none; border:1px solid var(--line);}
+.friend-profile-sheet .profile-showcase{grid-template-columns:118px minmax(0,1fr);}
+.friend-profile-sheet .profile-stat{overflow-wrap:anywhere;}
 .friend-profile-sheet .profile-pet-preview{min-height:118px;}
 .friend-profile-sheet .friend-avatar{width:54px; height:54px; flex:0 0 54px;}
 .friend-profile-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;}

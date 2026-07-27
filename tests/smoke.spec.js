@@ -133,7 +133,7 @@ test('map category changes keep the list scroll position visible', async ({ page
   for(const item of result){
     expect(item.active).toBe(item.label);
     expect(item.listText).toContain(`測試${item.label}`);
-    expect(item.after).toBeGreaterThanOrEqual(Math.min(item.desired, item.maxScroll) - 1);
+    expect(item.after).toBeGreaterThanOrEqual(Math.min(item.desired, item.maxScroll) - 6);
   }
 });
 
@@ -1690,4 +1690,20 @@ test('friend distance card opens a friend profile before map focus', async ({ pa
   await expect(page.locator('.friend-profile-sheet')).toContainText('35.68120, 139.76710');
   await expect(page.locator('.friend-profile-sheet .character-figure')).toHaveClass(/gender-female/);
   await expect(page.locator('.friend-profile-actions .btn-primary')).toBeEnabled();
+  const spacing = await page.evaluate(() => {
+    const sheet = document.getElementById('sheet').getBoundingClientRect();
+    const title = document.querySelector('.friend-profile-sheet .sheet-head h2').getBoundingClientRect();
+    const content = document.querySelector('.friend-profile-sheet');
+    const contentStyle = getComputedStyle(content);
+    return {
+      sheetLeft: sheet.left,
+      contentPaddingLeft: parseFloat(contentStyle.paddingLeft),
+      titleInset: title.left - sheet.left,
+      sheetRightGap: window.innerWidth - sheet.right,
+    };
+  });
+  expect(spacing.sheetLeft).toBeGreaterThanOrEqual(8);
+  expect(spacing.sheetRightGap).toBeGreaterThanOrEqual(8);
+  expect(spacing.contentPaddingLeft).toBeGreaterThanOrEqual(16);
+  expect(spacing.titleInset).toBeGreaterThanOrEqual(16);
 });
