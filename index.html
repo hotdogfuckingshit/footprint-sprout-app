@@ -96,6 +96,9 @@ body{
 .map-wrap{margin:0 16px 12px; border-radius:22px; overflow:hidden; box-shadow:var(--shadow); border:3px solid var(--paper); position:relative;}
 .map-wrap iframe{width:100%; height:210px; border:0; display:block;}
 .map-wrap #map{position:relative; z-index:1;}
+.map-load-state{width:100%; height:100%; min-height:160px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:#5C6B8A; font-size:12px; text-align:center; padding:16px; line-height:1.55;}
+.map-load-state b{font-size:13px; color:var(--ink);}
+.map-load-state button{border:0; border-radius:999px; background:var(--leaf); color:#fff; padding:8px 14px; font-size:12px; font-weight:900; font-family:inherit; box-shadow:var(--shadow);}
 .gm-fullscreen-control,
 .gm-style button[title="Map camera controls"],
 .gm-style button[aria-label="Map camera controls"],
@@ -530,8 +533,8 @@ body{
 	      <div class="hero-line">看見別人的城市記憶，走到那裡，留下你自己的。<br>目前附近 <b id="visitedCount">0</b>/<span id="totalCount">8</span> 個地點已到訪。</div>
       <div class="quest-card" id="questCard"></div>
       <div class="map-wrap" id="mapWrap" onclick="handleMapClick(event)" ondblclick="handleMapDoubleClick(event)" ontouchstart="handleMapTouchStart(event)" ontouchmove="handleMapTouchMove(event)" ontouchend="handleMapTouchEnd(event)">
-        <div id="map" style="width:100%; height:210px; background:#DCEBF7; display:flex; align-items:center; justify-content:center; color:#5C6B8A; font-size:12px; text-align:center; padding:12px;">
-          地圖載入中…如果一直顯示這行字，請確認 .env 已填 VITE_GOOGLE_MAPS_API_KEY
+        <div id="map" style="width:100%; height:210px; background:#DCEBF7;">
+          <div class="map-load-state"><b>地圖載入中...</b><span>如果網路或瀏覽器暫時擋住 Google Maps，稍等一下或按重試。</span></div>
         </div>
         <div class="map-badge" id="mapBadge">📍 西屯區・預設位置</div>
         <button class="map-expand-btn" onclick="toggleMapFullscreen(true); event.stopPropagation();">展開地圖</button>
@@ -2525,6 +2528,7 @@ const DEFAULT_MAP_ZOOM = 14;
 const USER_LOCATION_ZOOM = 15;
 const NEARBY_RADIUS_M = 500;
 let map, userMarker, friendInfoWindow, mapMarkers = [], friendMarkers = [];
+let mapLoadTimer = null;
 let lastMapTouchAt = 0;
 let lastMapTouchEventAt = 0;
 let pendingMapExitTimer = null;
@@ -2661,6 +2665,7 @@ function handleMapClick(event){
 
 // Maps JavaScript API 載入完成後，Google 會自動呼叫這個 callback（見 <head> 裡的 script 標籤）
 function initMap(){
+  if(mapLoadTimer) clearTimeout(mapLoadTimer);
   map = new google.maps.Map(document.getElementById('map'), {
     center: {lat: HERE.lat, lng: HERE.lng},
     zoom: DEFAULT_MAP_ZOOM,
@@ -2678,20 +2683,48 @@ function initMap(){
 
 window.initMap = initMap;
 
-function loadGoogleMaps(){
+function setMapLoadState(title, detail, canRetry = false){
+  const mapEl = document.getElementById('map');
+  if(!mapEl) return;
+  mapEl.innerHTML = `
+    <div class="map-load-state">
+      <b>${escapeHtml(title)}</b>
+      <span>${escapeHtml(detail)}</span>
+      ${canRetry ? `<button type="button" onclick="loadGoogleMaps(true); event.stopPropagation();">重試載入地圖</button>` : ''}
+    </div>
+  `;
+}
+
+function loadGoogleMaps(retry = false){
+  if(map) return;
+  if(window.google?.maps){
+    initMap();
+    return;
+  }
   const key = String(GOOGLE_MAPS_KEY || '').trim();
   if(!key || key.includes('VITE_GOOGLE_MAPS_API_KEY')){
-    document.getElementById('map').innerHTML = '尚未設定 Google Maps 金鑰。請在 .env 填入 VITE_GOOGLE_MAPS_API_KEY，重啟伺服器後地圖就會載入。';
+    setMapLoadState('尚未設定 Google Maps 金鑰', '目前會先使用附近清單；部署時需要把 VITE_GOOGLE_MAPS_API_KEY 加到環境變數。');
     document.getElementById('locateNote').textContent = '目前使用預設探索清單；填入 Google key 後會同步附近真實地點';
     return;
   }
+  const existing = document.getElementById('googleMapsScript');
+  if(existing){
+    if(!retry) return;
+    existing.remove();
+  }
+  setMapLoadState('地圖載入中...', '如果網路或瀏覽器暫時擋住 Google Maps，稍等一下或按重試。');
   const script = document.createElement('script');
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=initMap`;
+  script.id = 'googleMapsScript';
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=initMap&loading=async`;
   script.async = true;
   script.defer = true;
   script.onerror = () => {
-    document.getElementById('map').innerHTML = 'Google Maps 載入失敗，請檢查金鑰限制、網域來源與已啟用的 API。';
+    if(mapLoadTimer) clearTimeout(mapLoadTimer);
+    setMapLoadState('Google Maps 載入失敗', '請重新整理或確認 Google Cloud 的 Maps JavaScript API、Places API、網域限制仍允許這個網址。', true);
   };
+  mapLoadTimer = setTimeout(() => {
+    if(!map) setMapLoadState('Google Maps 載入較慢', '這通常是手機網路、瀏覽器 WebView 或 Google script 暫時沒有回應；API key 本身若可用，按重試即可重新載入。', true);
+  }, 12000);
   document.head.appendChild(script);
 }
 
