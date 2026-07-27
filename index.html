@@ -397,9 +397,9 @@ body{
 .character-figure{position:relative; width:88px; height:132px; z-index:1;}
 .character-scene.small .character-figure{transform:scale(.78); transform-origin:bottom center;}
 .char-head{position:absolute; left:24px; top:12px; width:42px; height:45px; border-radius:48% 48% 44% 44%; background:#FFD8B8; box-shadow:inset -6px -8px 12px rgba(0,0,0,.08); z-index:4;}
-.char-hair{position:absolute; left:18px; top:5px; width:54px; height:45px; background:#4E342E; z-index:5;}
-.hair-short{border-radius:26px 26px 12px 12px; clip-path:polygon(0 34%,18% 8%,50% 0,82% 8%,100% 34%,90% 62%,68% 42%,46% 58%,28% 42%,8% 62%);}
-.hair-bob{height:60px; border-radius:28px 28px 18px 18px; clip-path:polygon(3% 25%,20% 4%,50% 0,82% 6%,98% 26%,92% 100%,12% 100%);}
+.char-hair{position:absolute; left:18px; top:5px; width:54px; height:45px; background:#4E342E; z-index:3;}
+.hair-short{z-index:5; border-radius:26px 26px 12px 12px; clip-path:polygon(0 34%,18% 8%,50% 0,82% 8%,100% 34%,90% 62%,68% 42%,46% 58%,28% 42%,8% 62%);}
+.hair-bob{left:16px; top:3px; width:58px; height:62px; border-radius:30px 30px 18px 18px; clip-path:polygon(0 20%,18% 4%,50% 0,82% 4%,100% 20%,92% 100%,76% 100%,74% 50%,62% 22%,50% 18%,38% 22%,26% 50%,24% 100%,8% 100%);}
 .hair-cap{top:0; height:35px; background:#F4F7FB; border-radius:24px 24px 10px 10px; box-shadow:inset 0 -8px 0 rgba(28,37,65,.08);}
 .hair-cap:after{content:''; position:absolute; left:6px; right:6px; bottom:8px; height:4px; border-radius:99px; background:linear-gradient(90deg,#17A673,#FFC93C,#7C5CFC);}
 .char-face{position:absolute; inset:0; z-index:6;}
@@ -428,6 +428,7 @@ body{
 .character-options.two{grid-template-columns:repeat(2,1fr);}
 .character-option{border:1px solid var(--line); border-radius:13px; padding:8px 6px; background:#F8FCFF; color:var(--ink); font-size:11px; font-weight:900; font-family:inherit; cursor:pointer;}
 .character-option.on{background:#EAFBF3; border-color:var(--leaf); color:var(--leaf-dark);}
+.character-save-row{display:grid; grid-template-columns:1fr; gap:6px; margin-top:2px;}
 .friend-card{cursor:pointer;}
 .friend-profile-sheet{display:grid; gap:12px;}
 .friend-profile-sheet .profile-home{margin:0; box-shadow:none; border:1px solid var(--line);}
@@ -820,7 +821,6 @@ const LOCATIONS = [
 const DEFAULT_CHARACTER = { gender:'male', hair:'short', eyes:'medium', brow:'medium', outfit:'tee' };
 const CHARACTER_OPTIONS = {
   gender: [['male','男生'], ['female','女生']],
-  hair: [['short','短髮'], ['bob','中長髮'], ['cap','毛帽']],
   eyes: [['small','小眼'], ['medium','標準'], ['large','大眼']],
   brow: [['short','短眉'], ['medium','標準'], ['long','長眉']],
   outfit: [['tee','城市T'], ['hoodie','連帽衫'], ['jacket','外套']],
@@ -848,7 +848,8 @@ let state = {
   unlockedAccessories: [],
   routeHistory: [],
   ordinarySkipDate: '',
-  character: {...DEFAULT_CHARACTER}
+  character: {...DEFAULT_CHARACTER},
+  characterDraft: null
 };
 
 const STEP_LOG_KEY = 'footprintStepLogs:v1';
@@ -891,9 +892,10 @@ function normalizeCharacter(raw = {}){
     const allowed = new Set((CHARACTER_OPTIONS[key] || []).map(([value]) => value));
     return allowed.has(raw?.[key]) ? raw[key] : DEFAULT_CHARACTER[key];
   };
+  const gender = pick('gender');
   return {
-    gender: pick('gender'),
-    hair: pick('hair'),
+    gender,
+    hair: gender === 'female' ? 'bob' : 'short',
     eyes: pick('eyes'),
     brow: pick('brow'),
     outfit: pick('outfit'),
@@ -1884,9 +1886,13 @@ function characterHtml(character = state.character, size = ''){
   `;
 }
 
+function activeCharacter(){
+  return normalizeCharacter(state.characterDraft || state.character);
+}
+
 function characterEditorHtml(){
-  const labels = { gender:'角色', hair:'髮型', eyes:'眼睛', brow:'眉毛', outfit:'服裝' };
-  const current = normalizeCharacter(state.character);
+  const labels = { gender:'角色', eyes:'眼睛', brow:'眉毛', outfit:'服裝' };
+  const current = activeCharacter();
   return `
     <div class="character-editor">
       ${Object.entries(CHARACTER_OPTIONS).map(([key, options]) => `
@@ -1899,18 +1905,27 @@ function characterEditorHtml(){
           </div>
         </div>
       `).join('')}
+      <div class="character-save-row">
+        <button class="btn btn-primary" onclick="saveCharacterChanges()">儲存變更</button>
+      </div>
     </div>
   `;
 }
 
 function setCharacterOption(key, value){
   if(!CHARACTER_OPTIONS[key]?.some(([option]) => option === value)) return;
-  state.character = normalizeCharacter({...state.character, [key]: value});
+  state.characterDraft = normalizeCharacter({...activeCharacter(), [key]: value});
+  renderProfile();
+}
+
+function saveCharacterChanges(){
+  state.character = activeCharacter();
+  state.characterDraft = null;
   persistPetLog();
   scheduleUserStatusSync();
   renderProfile();
   renderTop();
-  toast('角色外觀已更新');
+  toast('角色外觀已儲存');
 }
 
 function profileHomeHtml(person = onlineState.user, options = {}){
@@ -1946,7 +1961,7 @@ function renderProfile(){
   const edit = document.getElementById('profileEdit');
   const home = document.getElementById('profileHome');
   if(!avatar || !name || !meta || !edit) return;
-  if(home) home.innerHTML = profileHomeHtml(onlineState.user || {displayName:'玩家'});
+  if(home) home.innerHTML = profileHomeHtml(onlineState.user || {displayName:'玩家'}, {character: activeCharacter()});
   if(!onlineState.user){
     avatar.classList.remove('avatar-photo');
     avatar.textContent = '?';
@@ -2760,6 +2775,7 @@ let lastMapTouchEventAt = 0;
 let pendingMapExitTimer = null;
 let mapTouchGesture = null;
 let initialMapStabilized = false;
+let safariMapWakeupsBound = false;
 
 function focusOwnLocation(zoom = USER_LOCATION_ZOOM){
   if(!map) return;
@@ -2800,27 +2816,67 @@ function resizeMapSoon(nextFullscreen = document.getElementById('mapWrap')?.clas
   }, 80);
 }
 
+function isSafariMapBrowser(){
+  const ua = navigator.userAgent || '';
+  return /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|Chrome|Chromium|Android/i.test(ua);
+}
+
+function ensureMapElementLayout(){
+  const mapEl = document.getElementById('map');
+  if(!mapEl) return;
+  const fullscreen = document.getElementById('mapWrap')?.classList.contains('map-fullscreen');
+  mapEl.style.width = '100%';
+  mapEl.style.height = fullscreen ? '100%' : '210px';
+  mapEl.style.minHeight = fullscreen ? '100%' : '210px';
+  void mapEl.offsetHeight;
+}
+
 function stabilizeMapViewport({forceZoom = false} = {}){
   if(!map || !window.google?.maps) return;
+  ensureMapElementLayout();
   const wrap = document.getElementById('mapWrap');
   const fullscreen = wrap?.classList.contains('map-fullscreen');
   google.maps.event.trigger(map, 'resize');
   map.setCenter({lat: HERE.lat, lng: HERE.lng});
   if(forceZoom && !fullscreen && typeof map.setZoom === 'function') map.setZoom(DEFAULT_MAP_ZOOM);
+  if(typeof map.getZoom === 'function' && typeof map.setZoom === 'function') map.setZoom(map.getZoom());
+  if(typeof map.panBy === 'function') map.panBy(0, 0);
   placeUserMarker();
 }
 
 function stabilizeInitialMap(){
   if(initialMapStabilized || !map || !window.google?.maps) return;
   initialMapStabilized = true;
-  [0, 80, 180, 360, 800, 1400].forEach((delay) => {
+  ensureMapElementLayout();
+  const delays = isSafariMapBrowser()
+    ? [0, 60, 120, 240, 480, 900, 1600, 2400, 3600]
+    : [0, 80, 180, 360, 800, 1400];
+  delays.forEach((delay) => {
     setTimeout(() => stabilizeMapViewport({forceZoom: delay <= 180}), delay);
   });
+  requestAnimationFrame(() => requestAnimationFrame(() => stabilizeMapViewport({forceZoom: true})));
   const once = window.google?.maps?.event?.addListenerOnce;
   if(typeof once === 'function'){
     once(map, 'idle', () => stabilizeMapViewport());
     once(map, 'tilesloaded', () => stabilizeMapViewport());
   }
+  bindSafariMapWakeups();
+}
+
+function bindSafariMapWakeups(){
+  if(safariMapWakeupsBound) return;
+  safariMapWakeupsBound = true;
+  const wake = () => {
+    [0, 120, 420, 900].forEach((delay) => setTimeout(() => stabilizeMapViewport({forceZoom: delay === 0}), delay));
+  };
+  window.addEventListener('pageshow', wake);
+  window.addEventListener('load', wake);
+  window.addEventListener('focus', wake);
+  window.addEventListener('orientationchange', wake);
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible') wake();
+  });
+  window.visualViewport?.addEventListener?.('resize', wake);
 }
 
 function toggleMapFullscreen(force){
@@ -2917,6 +2973,7 @@ function handleMapClick(event){
 function initMap(){
   if(mapLoadTimer) clearTimeout(mapLoadTimer);
   mapLoadTimer = null;
+  ensureMapElementLayout();
   map = new google.maps.Map(document.getElementById('map'), {
     center: {lat: HERE.lat, lng: HERE.lng},
     zoom: DEFAULT_MAP_ZOOM,

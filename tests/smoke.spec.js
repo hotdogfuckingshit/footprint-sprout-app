@@ -1539,6 +1539,8 @@ test('map initializes visibly without pressing locate first', async ({ page }) =
       markerCount: window.markerTitles.length,
       listeners: window.listenerNames,
       loadText: document.getElementById('map').textContent,
+      mapHeight: document.getElementById('map').style.height,
+      mapMinHeight: document.getElementById('map').style.minHeight,
     };
   });
 
@@ -1549,6 +1551,8 @@ test('map initializes visibly without pressing locate first', async ({ page }) =
   expect(result.markerCount).toBeGreaterThan(0);
   expect(result.listeners).toEqual(expect.arrayContaining(['idle', 'tilesloaded']));
   expect(result.loadText).not.toContain('地圖載入中');
+  expect(result.mapHeight).toBe('210px');
+  expect(result.mapMinHeight).toBe('210px');
 });
 
 test('exiting fullscreen restores normal local map zoom', async ({ page }) => {
@@ -1589,7 +1593,9 @@ test('profile character customization persists and is included in public status'
   await page.locator('.navbtn[data-tab="me"]').click();
 
   await expect(page.locator('#profileHome .character-scene')).toBeVisible();
-  await expect(page.locator('#profileEdit .character-option')).toHaveCount(14);
+  await expect(page.locator('#profileEdit .character-option')).toHaveCount(11);
+  await expect(page.locator('#profileEdit')).not.toContainText('毛帽');
+  await expect(page.locator('#profileEdit')).not.toContainText('髮型');
 
   const result = await page.evaluate(() => {
     window.statusPayloads = [];
@@ -1598,12 +1604,21 @@ test('profile character customization persists and is included in public status'
         window.statusPayloads.push(payload);
       },
     };
+    const originalStored = JSON.parse(localStorage.getItem('footprintPetLog:v1'))?.character || state.character;
     setCharacterOption('gender', 'female');
-    setCharacterOption('hair', 'bob');
     setCharacterOption('eyes', 'large');
     setCharacterOption('brow', 'long');
     setCharacterOption('outfit', 'jacket');
+    const beforeSave = {
+      character: state.character,
+      draft: state.characterDraft,
+      stored: JSON.parse(localStorage.getItem('footprintPetLog:v1'))?.character || state.character,
+      publicCharacter: publicStatusPayload().character,
+    };
+    saveCharacterChanges();
     return {
+      originalStored,
+      beforeSave,
       character: state.character,
       stored: JSON.parse(localStorage.getItem('footprintPetLog:v1')).character,
       publicCharacter: publicStatusPayload().character,
@@ -1617,6 +1632,10 @@ test('profile character customization persists and is included in public status'
     brow: 'long',
     outfit: 'jacket',
   });
+  expect(result.beforeSave.draft).toEqual(result.character);
+  expect(result.beforeSave.character).toEqual(result.originalStored);
+  expect(result.beforeSave.stored).toEqual(result.originalStored);
+  expect(result.beforeSave.publicCharacter).toEqual(result.originalStored);
   expect(result.stored).toEqual(result.character);
   expect(result.publicCharacter).toEqual(result.character);
   await expect(page.locator('#profileHome .character-figure')).toHaveClass(/gender-female/);
