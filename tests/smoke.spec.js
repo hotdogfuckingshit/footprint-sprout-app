@@ -687,6 +687,109 @@ test('friend code input is readable on mobile and party invite can be accepted',
   await expect.poll(() => page.evaluate(() => window.joinedParty)).toBe('party-1');
 });
 
+test('walk party rewards are shown once and can be claimed by teammates', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  await page.locator('.navbtn[data-tab="online"]').click();
+  await page.evaluate(() => {
+    window.claimedRewardId = '';
+    window.FootprintOnline = {
+      claimPartyReward(rewardId) {
+        window.claimedRewardId = rewardId;
+        return {
+          id: rewardId,
+          kind: 'visit',
+          title: 'Mock Cafe',
+          sourceName: 'Friend A',
+          createdByUid: 'friend-a',
+          petGrowth: 12,
+          hatchPoints: 6,
+          userXp: 12,
+          claimed: {},
+          createdAt: Date.now(),
+        };
+      },
+    };
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: { uid: 'me', displayName: 'Me', email: 'me@example.com' },
+      friendCode: 'ABC12345',
+      friends: [{ uid: 'friend-a', displayName: 'Friend A' }],
+      party: {
+        id: 'party-1',
+        hostUid: 'friend-a',
+        goal: 'walk',
+        members: {
+          me: { displayName: 'Me' },
+          'friend-a': { displayName: 'Friend A' },
+        },
+      },
+      partyRewards: [
+        {
+          id: 'reward-1',
+          kind: 'visit',
+          title: 'Mock Cafe',
+          sourceName: 'Friend A',
+          createdByUid: 'friend-a',
+          petGrowth: 12,
+          hatchPoints: 6,
+          userXp: 12,
+          claimed: {},
+          createdAt: Date.now(),
+        },
+      ],
+      partyInvites: [],
+      sharing: false,
+    });
+  });
+
+  await expect(page.getByTestId('party-rewards-list')).toBeVisible();
+  await expect(page.getByTestId('party-reward-card')).toHaveCount(1);
+  await page.getByTestId('party-reward-card').locator('button').click();
+  await expect.poll(() => page.evaluate(() => window.claimedRewardId)).toBe('reward-1');
+  await expect.poll(() => page.evaluate(() => state.hatchPoints)).toBe(6);
+});
+
+test('completed party activity publishes a shared reward for other members', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(() => {
+    window.sharedPartyRewards = [];
+    window.FootprintOnline = {
+      recordVisit() {},
+      sharePartyReward(reward) {
+        window.sharedPartyRewards.push(reward);
+      },
+    };
+    window.receiveOnlineSnapshot({
+      configured: true,
+      status: 'signed-in',
+      user: { uid: 'me', displayName: 'Me', email: 'me@example.com' },
+      friendCode: 'ABC12345',
+      friends: [{ uid: 'friend-a', displayName: 'Friend A' }],
+      party: {
+        id: 'party-1',
+        hostUid: 'me',
+        goal: 'walk',
+        members: {
+          me: { displayName: 'Me' },
+          'friend-a': { displayName: 'Friend A' },
+        },
+      },
+      partyRewards: [],
+      partyInvites: [],
+      sharing: false,
+    });
+    finishCheckin(LOCATIONS[0].id);
+    return window.sharedPartyRewards[0];
+  });
+
+  expect(result.kind).toBe('visit');
+  expect(result.title).toBeTruthy();
+  expect(result.hatchPoints).toBeGreaterThan(0);
+  expect(result.petGrowth).toBeGreaterThan(0);
+  expect(result.userXp).toBeGreaterThan(0);
+});
+
 test('friend distance only appears after both sides share locations', async ({ page }) => {
   await page.goto('http://localhost:5173');
   await page.locator('.navbtn[data-tab="online"]').click();

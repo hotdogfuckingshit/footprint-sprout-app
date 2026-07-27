@@ -360,6 +360,14 @@ body{
 .party-choice:first-of-type{border-top:0;}
 .party-choice input{width:20px; height:20px; accent-color:var(--leaf); flex-shrink:0;}
 .party-choice .friend-main{pointer-events:none;}
+.party-rewards{margin-top:10px; border-top:1px solid var(--line); padding-top:10px; display:grid; gap:8px;}
+.party-reward-card{display:grid; grid-template-columns:38px minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px; border:1px solid var(--line); border-radius:16px; background:#F8FCFF;}
+.party-reward-icon{width:38px; height:38px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#FFF4C2,#DDF7EA); font-size:19px;}
+.party-reward-main{min-width:0;}
+.party-reward-title{font-size:12.5px; font-weight:900; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.party-reward-meta{font-size:10.5px; color:var(--ink-soft); line-height:1.45; margin-top:2px;}
+.party-reward-card.claimed{opacity:.64;}
+.party-reward-card .btn{padding:9px 12px; font-size:12px; min-height:38px;}
 .share-picker{margin-top:10px; border:1px solid var(--line); border-radius:16px; padding:10px 12px; background:#F8FCFF;}
 .share-picker-title{font-size:12px; font-weight:900; color:var(--ink); margin-bottom:2px;}
 .share-picker-note{font-size:11px; color:var(--ink-soft); line-height:1.45; margin-bottom:6px;}
@@ -578,6 +586,7 @@ body{
       <div class="online-panel">
 	        <h3>散步小隊</h3>
 	        <div id="partyStatus" class="empty-online">第一版先做即時好友定位；小隊會用同一套連線資料顯示一起散步的人。</div>
+	        <div id="partyRewardsList"></div>
 	        <div id="partyInvitesList"></div>
 	        <div id="partyInvitePicker"></div>
 	        <div class="online-actions" style="margin-top:10px;">
@@ -866,6 +875,65 @@ function awardPetGrowth(points, reason = '任務'){
   } else if(state.hatched) {
     toast(`${reason}完成，寵物成長 +${gain}`);
   }
+}
+
+const PARTY_REWARD_META = {
+  photoTask: { icon:'📸', label:'照片任務' },
+  blindRoute: { icon:'🧭', label:'盲盒路線' },
+  visit: { icon:'📍', label:'地點到訪' },
+  memory: { icon:'🌿', label:'合照記憶' },
+};
+
+function normalizePartyReward(raw){
+  const meta = PARTY_REWARD_META[raw?.kind] || { icon:'🎁', label:'小隊獎勵' };
+  return {
+    id: String(raw?.id || ''),
+    kind: raw?.kind || 'shared',
+    icon: raw?.icon || meta.icon,
+    label: raw?.label || meta.label,
+    title: String(raw?.title || meta.label).slice(0, 80),
+    sourceName: String(raw?.sourceName || raw?.createdByName || '隊友').slice(0, 24),
+    createdByUid: raw?.createdByUid || '',
+    createdByName: raw?.createdByName || raw?.sourceName || '隊友',
+    petGrowth: Math.max(0, Math.floor(Number(raw?.petGrowth) || 0)),
+    hatchPoints: Math.max(0, Math.floor(Number(raw?.hatchPoints) || 0)),
+    userXp: Math.max(0, Math.floor(Number(raw?.userXp) || 0)),
+    createdAt: Number(raw?.createdAt || Date.now()),
+    claimed: raw?.claimed && typeof raw.claimed === 'object' ? raw.claimed : {},
+  };
+}
+
+function partyHasOtherMembers(){
+  if(!onlineState.user || !onlineState.party?.members) return false;
+  return Object.keys(onlineState.party.members).some((uid) => uid !== onlineState.user.uid);
+}
+
+function sharePartyReward(reward){
+  if(!onlineState.user || !onlineState.party || !partyHasOtherMembers()) return;
+  window.FootprintOnline?.sharePartyReward?.(normalizePartyReward(reward));
+}
+
+function applyPartyReward(raw){
+  const reward = normalizePartyReward(raw);
+  const growth = reward.petGrowth || reward.hatchPoints;
+  if(reward.userXp) state.userXp += reward.userXp;
+  if(state.hatched) awardPetGrowth(growth, '小隊共享獎勵');
+  else awardHatchPoints(reward.hatchPoints || Math.max(1, Math.round(growth / 3)), '小隊共享獎勵');
+  updateLevels();
+  persistPetLog();
+  renderTop();
+  if(document.getElementById('screen-pet')?.classList.contains('active')) renderPet();
+  toast(`已領取 ${reward.sourceName} 的共享獎勵`);
+}
+
+async function claimPartyReward(rewardId){
+  if(!onlineState.user){ toast('請先登入'); return; }
+  const reward = (onlineState.partyRewards || []).find((item) => item.id === rewardId);
+  if(!reward){ toast('找不到這筆小隊獎勵'); return; }
+  if(reward.claimed?.[onlineState.user.uid]){ toast('這筆獎勵已領取'); return; }
+  if(reward.createdByUid === onlineState.user.uid){ toast('自己完成的獎勵已自動記錄，不能重複領'); return; }
+  const claimedReward = await window.FootprintOnline?.claimPartyReward?.(rewardId);
+  if(claimedReward) applyPartyReward(claimedReward);
 }
 
 function setTodaySteps(steps, source = 'motion'){
@@ -1392,6 +1460,14 @@ async function handleQuestPhoto(event){
   if(result.ok){
     questState.phase = 'checked';
     awardHatchPoints(8, '照片任務');
+    sharePartyReward({
+      kind: 'photoTask',
+      title: '照片任務驗證',
+      sourceName: onlineState.user?.displayName || '隊友',
+      hatchPoints: 3,
+      petGrowth: 8,
+      userXp: 4,
+    });
     toast('照片任務通過，下一段線索已準備好');
   } else {
     toast('照片還不符合任務，請重拍或使用安全略過');
@@ -1460,6 +1536,14 @@ function completeBlindQuest(){
 	  renderTop();
 	  renderQuest();
 	  renderReviews();
+	  sharePartyReward({
+	    kind: 'blindRoute',
+	    title: finalLoc?.name ? `抵達 ${finalLoc.name}` : '盲盒路線',
+	    sourceName: onlineState.user?.displayName || '隊友',
+	    hatchPoints: 12,
+	    petGrowth: Math.max(18, Math.round(growthReward * 0.35)),
+	    userXp: 30,
+	  });
 	  toast(`旅程完成，寵物成長 +${growthReward}`);
 	}
 
@@ -1506,6 +1590,7 @@ let onlineState = {
   friends: [],
   party: null,
   partyInvites: [],
+  partyRewards: [],
   myLocation: null,
   sharing: false,
   shareTargetUids: [],
@@ -1590,6 +1675,7 @@ function renderOnline(){
   const sharingText = document.getElementById('sharingText');
 	  const shareTargetPicker = document.getElementById('shareTargetPicker');
 	  const partyStatus = document.getElementById('partyStatus');
+	  const partyRewardsList = document.getElementById('partyRewardsList');
 	  const partyInvitesList = document.getElementById('partyInvitesList');
 	  const partyInvitePicker = document.getElementById('partyInvitePicker');
 	  const leavePartyBtn = document.getElementById('leavePartyBtn');
@@ -1640,6 +1726,7 @@ function renderOnline(){
 	  }
 
 	  renderPartyInvites(partyInvitesList, signedIn);
+	  renderPartyRewards(partyRewardsList, signedIn);
 	  renderPartyInvitePicker(partyInvitePicker, signedIn);
 
 	  if(onlineState.party){
@@ -1654,6 +1741,43 @@ function renderOnline(){
 	    partyStatus.className = 'empty-online';
 	    partyStatus.textContent = signedIn ? '尚未建立小隊。建立後，好友清單會變成一起散步的小隊看板。' : '登入後可以建立散步小隊。';
 	  }
+	}
+
+	function renderPartyRewards(container, signedIn){
+	  if(!container) return;
+	  if(!signedIn || !onlineState.party){
+	    container.innerHTML = '';
+	    return;
+	  }
+	  const rewards = (onlineState.partyRewards || []).map(normalizePartyReward).sort((a, b) => b.createdAt - a.createdAt).slice(0, 6);
+	  if(!rewards.length){
+	    container.innerHTML = '<div class="empty-online" style="margin-top:10px;">小隊成員完成打卡、照片任務或盲盒路線後，這裡會出現可共享領取的獎勵。</div>';
+	    return;
+	  }
+	  const myUid = onlineState.user?.uid;
+	  container.innerHTML = `
+	    <div class="party-rewards" data-testid="party-rewards-list">
+	      <div class="party-picker-title">小隊共享獎勵</div>
+	      ${rewards.map((reward) => {
+	        const claimed = Boolean(reward.claimed?.[myUid]);
+	        const own = reward.createdByUid === myUid;
+	        const disabled = claimed || own;
+	        const rewardText = state.hatched
+	          ? `寵物成長 +${reward.petGrowth || reward.hatchPoints}`
+	          : `孵化 +${reward.hatchPoints || Math.max(1, Math.round((reward.petGrowth || 0) / 3))}`;
+	        return `
+	          <div class="party-reward-card ${disabled ? 'claimed' : ''}" data-testid="party-reward-card">
+	            <div class="party-reward-icon">${reward.icon}</div>
+	            <div class="party-reward-main">
+	              <div class="party-reward-title">${escapeHtml(reward.sourceName)} 完成 ${escapeHtml(reward.title)}</div>
+	              <div class="party-reward-meta">${escapeHtml(reward.label)}・${rewardText}・${timeAgo(reward.createdAt)}</div>
+	            </div>
+	            <button class="btn ${disabled ? 'btn-ghost' : 'btn-primary'}" ${disabled ? 'disabled' : ''} onclick="claimPartyReward('${escapeHtml(reward.id)}')">${own ? '你的' : (claimed ? '已領' : '領取')}</button>
+	          </div>
+	        `;
+	      }).join('')}
+	    </div>
+	  `;
 	}
 
 	function renderPartyInvites(container, signedIn){
@@ -2400,7 +2524,7 @@ function initMap(){
     fullscreenControl: false
   });
   renderMapMarkers();
-  setTimeout(fetchNearbyRealPlaces, 250);
+  setTimeout(() => fetchNearbyRealPlaces(currentFilter, { preserveScroll: currentMapScrollTop() > 0 }), 250);
 }
 
 window.initMap = initMap;
@@ -2992,7 +3116,7 @@ function restoreMapScroll(scrollTop){
   const screen = document.getElementById('screen-map');
   if(!screen || !Number.isFinite(scrollTop)) return;
   const restore = () => {
-    screen.scrollTop = Math.min(scrollTop, Math.max(0, screen.scrollHeight - screen.clientHeight));
+    screen.scrollTop = Math.min(Math.ceil(scrollTop) + 8, Math.max(0, screen.scrollHeight - screen.clientHeight));
   };
   restore();
   requestAnimationFrame(restore);
@@ -3098,6 +3222,14 @@ function finishCheckin(id){
 	  persistVisitLog();
 	  persistPetLog();
   recordVisitBackend(l);
+  sharePartyReward({
+    kind: 'visit',
+    title: l.name,
+    sourceName: onlineState.user?.displayName || '隊友',
+    hatchPoints: firstVisit ? 6 : 2,
+    petGrowth: firstVisit ? 12 : 4,
+    userXp: firstVisit ? 12 : 4,
+  });
   renderTop();
   document.getElementById('sheetContent').innerHTML = `
     <div class="success-panel">
@@ -3161,6 +3293,14 @@ function saveMemory(id){
     persistPetLog();
   }
   renderTop();
+  sharePartyReward({
+    kind: 'memory',
+    title: '合照記憶',
+    sourceName: onlineState.user?.displayName || '隊友',
+    hatchPoints: 2,
+    petGrowth: 6,
+    userXp: 4,
+  });
   toast('記憶合照已儲存到寵物履歷 📌');
   closeSheet(); renderList();
 }
@@ -3339,10 +3479,14 @@ if(!configured){
     recordVisit(){},
     recordRoute(){},
     createParty(){ window.toast?.('請先設定 Firebase 連線參數'); },
+    inviteToParty(){ window.toast?.('請先設定 Firebase 連線參數'); },
     joinParty(){ window.toast?.('請先設定 Firebase 連線參數'); },
+    declineParty(){ window.toast?.('請先設定 Firebase 連線參數'); },
     leaveParty(){},
+    sharePartyReward(){},
+    claimPartyReward(){ window.toast?.('請先設定 Firebase 連線參數'); },
   };
-  window.receiveOnlineSnapshot?.({ configured: false, status: 'not-configured' });
+  window.receiveOnlineSnapshot?.({ configured: false, status: 'not-configured', partyRewards: [] });
 } else {
   const [
     { initializeApp },
@@ -3374,6 +3518,7 @@ if(!configured){
   let friendDetailUnsubs = [];
   let partyUnsub = null;
   let partyInviteUnsub = null;
+  let partyRewardUnsub = null;
   let userPartyUnsub = null;
   let shareTargetsUnsub = null;
   let stepLogUnsub = null;
@@ -3438,6 +3583,15 @@ if(!configured){
 	    return { updates, inviteFriends };
 	  }
 
+	  function rewardId(kind){
+	    const suffix = Math.random().toString(36).slice(2, 8);
+	    return `${Date.now()}-${currentUser.uid.slice(-8)}-${String(kind || 'reward').replace(/[^a-z0-9-]/gi, '')}-${suffix}`;
+	  }
+
+	  function currentPartyMemberUids(partyData = onlineState.party){
+	    return Object.keys(partyData?.members || {}).filter(Boolean);
+	  }
+
   function clearFriendDetailListeners(){
     friendDetailUnsubs.forEach((unsub) => unsub());
     friendDetailUnsubs = [];
@@ -3449,6 +3603,8 @@ if(!configured){
     clearFriendDetailListeners();
     if(partyUnsub) partyUnsub();
     partyUnsub = null;
+    if(partyRewardUnsub) partyRewardUnsub();
+    partyRewardUnsub = null;
     if(partyInviteUnsub) partyInviteUnsub();
     partyInviteUnsub = null;
     if(userPartyUnsub) userPartyUnsub();
@@ -3583,8 +3739,10 @@ if(!configured){
       activePartyId = link?.partyId || null;
       if(partyUnsub) partyUnsub();
       partyUnsub = null;
+      if(partyRewardUnsub) partyRewardUnsub();
+      partyRewardUnsub = null;
       if(!activePartyId){
-        emit({ party: null });
+        emit({ party: null, partyRewards: [] });
         return;
       }
       partyUnsub = onValue(ref(db, `parties/${activePartyId}`), (partySnap) => {
@@ -3594,9 +3752,19 @@ if(!configured){
         emit({ party: null });
         window.toast?.(`小隊資料讀取失敗：${firebaseMessage(error)}`);
       });
+      partyRewardUnsub = onValue(ref(db, `partyRewards/${activePartyId}`), (rewardSnap) => {
+        const rewards = Object.entries(rewardSnap.val() || {})
+          .map(([id, reward]) => normalizePartyReward({ id, ...(reward || {}) }))
+          .sort((a, b) => b.createdAt - a.createdAt)
+          .slice(0, 20);
+        emit({ partyRewards: rewards });
+      }, (error) => {
+        emit({ partyRewards: [] });
+        window.toast?.(`小隊共享獎勵讀取失敗：${firebaseMessage(error)}`);
+      });
     }, (error) => {
       activePartyId = null;
-      emit({ party: null });
+      emit({ party: null, partyRewards: [] });
       window.toast?.(`小隊狀態讀取失敗：${firebaseMessage(error)}`);
     });
   }
@@ -3651,7 +3819,7 @@ if(!configured){
     clearOnlineListeners();
     if(!user){
       currentPushTokenKey = null;
-      emit({ user: null, friendCode: '', friends: [], party: null, partyInvites: [], myLocation: null, sharing: false, shareTargetUids: [], status: 'signed-out', push: pushView({ enabled: false }) });
+      emit({ user: null, friendCode: '', friends: [], party: null, partyInvites: [], partyRewards: [], myLocation: null, sharing: false, shareTargetUids: [], status: 'signed-out', push: pushView({ enabled: false }) });
       return;
     }
     emit({
@@ -3671,7 +3839,7 @@ if(!configured){
       syncLocalStepLogsToBackend();
       handleNotificationLaunch();
     } catch (error) {
-      emit({ user: userView(user), friendCode: codeFromUid(user.uid), friends: [], party: null, partyInvites: [], status: 'signed-in-db-error' });
+      emit({ user: userView(user), friendCode: codeFromUid(user.uid), friends: [], party: null, partyInvites: [], partyRewards: [], status: 'signed-in-db-error' });
       window.toast?.(`已登入，但資料庫尚未允許讀寫：${firebaseMessage(error)}`);
     }
   });
@@ -3920,6 +4088,61 @@ if(!configured){
         console.warn('recordRoute failed', firebaseMessage(error));
       }
     },
+    async sharePartyReward(rawReward){
+      if(!currentUser) return;
+      const partyId = activePartyId || onlineState.party?.id;
+      const partyData = onlineState.party;
+      const memberIds = currentPartyMemberUids(partyData);
+      if(!partyId || memberIds.length < 2 || !memberIds.includes(currentUser.uid)) return;
+      try {
+        const reward = normalizePartyReward({
+          ...rawReward,
+          id: rewardId(rawReward?.kind),
+          createdByUid: currentUser.uid,
+          createdByName: onlineState.user?.displayName || currentUser.displayName || '玩家',
+          sourceName: onlineState.user?.displayName || currentUser.displayName || '玩家',
+          createdAt: Date.now(),
+          claimed: {
+            [currentUser.uid]: { claimedAt: Date.now(), auto: true },
+          },
+        });
+        await update(ref(db), {
+          [`partyRewards/${partyId}/${reward.id}`]: reward,
+        });
+      } catch (error) {
+        console.warn('sharePartyReward failed', firebaseMessage(error));
+      }
+    },
+    async claimPartyReward(rewardId){
+      if(!currentUser) return null;
+      const partyId = activePartyId || onlineState.party?.id;
+      const cleanRewardId = String(rewardId || '').replace(/[.#$/[\]]/g, '-');
+      if(!partyId || !cleanRewardId) return null;
+      try {
+        const rewardRef = ref(db, `partyRewards/${partyId}/${cleanRewardId}`);
+        const snap = await get(rewardRef);
+        if(!snap.exists()){
+          window.toast?.('找不到這筆小隊獎勵');
+          return null;
+        }
+        const reward = normalizePartyReward({ id: cleanRewardId, ...(snap.val() || {}) });
+        if(reward.createdByUid === currentUser.uid){
+          window.toast?.('自己完成的獎勵已自動記錄，不能重複領');
+          return null;
+        }
+        if(reward.claimed?.[currentUser.uid]){
+          window.toast?.('這筆獎勵已領取');
+          return null;
+        }
+        await update(ref(db), {
+          [`partyRewards/${partyId}/${cleanRewardId}/claimed/${currentUser.uid}`]: { claimedAt: Date.now() },
+        });
+        return reward;
+      } catch (error) {
+        window.toast?.(`領取共享獎勵失敗：${firebaseMessage(error)}`);
+        return null;
+      }
+    },
     async createParty(inviteUids = []){
       if(!currentUser) return;
       try {
@@ -3949,7 +4172,7 @@ if(!configured){
 	        const { updates: inviteUpdates, inviteFriends } = partyInviteUpdates(partyId, inviteUids, data);
 	        Object.assign(updates, inviteUpdates);
 	        await update(ref(db), updates);
-	        emit({ party: data });
+	        emit({ party: data, partyRewards: [] });
 	        window.toast?.(inviteFriends.length ? `散步小隊已建立，已邀請 ${inviteFriends.length} 位好友` : '散步小隊已建立，尚未邀請好友');
 	      } catch (error) {
 	        window.toast?.(`建立小隊失敗：${firebaseMessage(error)}`);
@@ -4040,7 +4263,7 @@ if(!configured){
             [`userParties/${currentUser.uid}`]: null,
           });
         }
-        emit({ party: null });
+        emit({ party: null, partyRewards: [] });
         window.toast?.(isHost ? '已解散小隊' : '已離開小隊');
       } catch (error) {
         window.toast?.(`離開小隊失敗：${firebaseMessage(error)}`);

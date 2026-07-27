@@ -81,6 +81,14 @@
         }
       }
     },
+    "partyRewards": {
+      "$partyId": {
+        ".read": "auth != null && root.child('parties').child($partyId).child('members').child(auth.uid).exists()",
+        "$rewardId": {
+          ".write": "auth != null && root.child('parties').child($partyId).child('members').child(auth.uid).exists()"
+        }
+      }
+    },
     "pushTokens": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
