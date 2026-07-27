@@ -137,21 +137,38 @@ test('map category changes keep the list scroll position visible', async ({ page
   }
 });
 
-test('pet hatches into a rotatable 3D developer-designed species and upload generator is removed', async ({ page }) => {
+test('pet hatches into one of five 3-stage rotatable 3D species and item generation is removed', async ({ page }) => {
   await page.goto('http://localhost:5173');
   await page.locator('.navbtn[data-tab="me"]').click();
   await expect(page.locator('.gen-btn')).toHaveCount(0);
   await expect(page.getByTestId('pet-upload-input')).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText('碎片');
 
-  await page.evaluate(() => {
+  const speciesMeta = await page.evaluate(() => ({
+    speciesCount: PET_SPECIES.length,
+    formCounts: PET_SPECIES.map((species) => species.forms.length),
+  }));
+  expect(speciesMeta.speciesCount).toBe(5);
+  expect(speciesMeta.formCounts).toEqual([3, 3, 3, 3, 3]);
+
+  const hatchResult = await page.evaluate(() => {
     state.hatchPoints = 95;
     awardHatchPoints(5, 'test');
+    return {
+      hatched: state.hatched,
+      stage: state.petEvolutionStage,
+      species: state.petSpecies,
+    };
   });
+  expect(hatchResult.hatched).toBe(true);
+  expect(hatchResult.stage).toBe(1);
+  expect(hatchResult.species).toBeTruthy();
+
   await page.locator('.navbtn[data-tab="pet"]').click();
   await expect(page.locator('#screen-pet')).toHaveClass(/active/);
   await expect(page.getByTestId('pet-3d-model')).toBeVisible();
   await expect(page.locator('#petLevel')).not.toHaveText('孵化中');
-  await expect(page.locator('#hatchBarLabel')).toHaveText('已孵化');
+  await expect(page.locator('#evoSummary .evo-chip')).toHaveCount(3);
   const before = await page.getByTestId('pet-3d-model').evaluate((el) => getComputedStyle(el).getPropertyValue('--pet-rot-y'));
   await page.getByTestId('pet-3d-model').dragTo(page.getByTestId('pet-3d-model'), {
     sourcePosition: { x: 38, y: 38 },
@@ -159,6 +176,29 @@ test('pet hatches into a rotatable 3D developer-designed species and upload gene
   });
   const after = await page.getByTestId('pet-3d-model').evaluate((el) => getComputedStyle(el).getPropertyValue('--pet-rot-y'));
   expect(after).not.toBe(before);
+
+  const evoResult = await page.evaluate(() => {
+    state.petXp = 170;
+    updateLevels();
+    renderPet();
+    const beforeClass = document.querySelector('[data-testid="pet-3d-model"]').className;
+    awardPetGrowth(15, 'test');
+    const midClass = document.querySelector('[data-testid="pet-3d-model"]').className;
+    awardPetGrowth(340, 'test');
+    const finalClass = document.querySelector('[data-testid="pet-3d-model"]').className;
+    return {
+      stage: state.petEvolutionStage,
+      beforeClass,
+      midClass,
+      finalClass,
+      label: document.getElementById('petLevel').textContent,
+    };
+  });
+  expect(evoResult.beforeClass).toContain('evo-1');
+  expect(evoResult.midClass).toContain('evo-2');
+  expect(evoResult.finalClass).toContain('evo-3');
+  expect(evoResult.stage).toBe(3);
+  expect(evoResult.label).toContain('完全體');
 });
 
 test('step counter starts from real daily steps and ignores demo rewards', async ({ page }) => {

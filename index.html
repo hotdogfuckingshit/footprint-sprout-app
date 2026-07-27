@@ -54,7 +54,7 @@ body{
 .notch{
   position:absolute; top:0; left:50%; transform:translateX(-50%);
   width:120px; height:22px; background:var(--ink); border-radius:0 0 16px 16px; z-index:50;
-}
+		}
 
 /* ---- top bar ---- */
 .topbar{
@@ -75,6 +75,7 @@ body{
 }
 .pill .ico{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;}
 .pill.frag .ico{background:#F1EBFF;}
+.pill.pet .ico{background:#EAFBF3;}
 .pill.step .ico{background:#FFF1D6;}
 
 /* ---- screens ---- */
@@ -246,6 +247,8 @@ body{
 .pet-svg-holder{position:relative; height:150px; display:flex; align-items:center; justify-content:center;}
 .pet-svg-holder.pet3d-ready{height:188px; perspective:760px; touch-action:none;}
 .pet3d-model{position:relative; width:156px; height:156px; transform-style:preserve-3d; transform:rotateX(-10deg) rotateY(var(--pet-rot-y, -24deg)); transition:transform .08s linear; filter:drop-shadow(0 18px 16px rgba(28,37,65,.18));}
+.pet3d-model.evo-2{width:168px; height:168px;}
+.pet3d-model.evo-3{width:178px; height:178px; filter:drop-shadow(0 22px 18px rgba(28,37,65,.22));}
 .pet3d-shadow{position:absolute; left:31px; right:31px; bottom:8px; height:16px; border-radius:50%; background:rgba(28,37,65,.12); transform:rotateX(72deg) translateZ(-34px);}
 .pet3d-body,.pet3d-head,.pet3d-belly,.pet3d-eye,.pet3d-mouth,.pet3d-part{position:absolute; transform-style:preserve-3d;}
 .pet3d-body{left:42px; top:50px; width:72px; height:84px; border-radius:44% 44% 38% 38%; background:radial-gradient(circle at 30% 22%, #fff8, transparent 32%), var(--body); box-shadow:inset -16px -18px 28px rgba(0,0,0,.12);}
@@ -268,7 +271,15 @@ body{
 .pet3d-sprout{left:65px; top:-14px; width:28px; height:34px; background:transparent; box-shadow:none; transform:translateZ(22px);}
 .pet3d-sprout:before{content:''; position:absolute; left:12px; top:15px; width:4px; height:22px; border-radius:999px; background:#249A60;}
 .pet3d-sprout:after{content:''; position:absolute; left:2px; top:0; width:24px; height:16px; border-radius:70% 30% 70% 30%; background:var(--accent); transform:rotate(-20deg);}
+.pet3d-crown{left:55px; top:-10px; width:48px; height:24px; background:linear-gradient(135deg,var(--accent),#FFF3B0); clip-path:polygon(0 100%,15% 35%,32% 100%,50% 18%,68% 100%,85% 35%,100% 100%); transform:translateZ(24px);}
+.pet3d-orbit{left:28px; top:74px; width:104px; height:22px; border:4px solid color-mix(in srgb, var(--accent), #fff 42%); border-radius:50%; background:transparent; box-shadow:none; transform:rotateZ(-8deg) translateZ(24px); opacity:.82;}
+.pet3d-horns{top:-12px; width:18px; height:30px; border-radius:70% 70% 20% 20%; transform-origin:bottom center;}
+.pet3d-horns.left{left:20px; transform:rotateZ(-28deg) translateZ(18px)}
+.pet3d-horns.right{right:20px; transform:rotateZ(28deg) translateZ(18px)}
 .pet-species-note{font-size:11px; color:var(--ink-soft); margin-top:6px; font-weight:800;}
+.evo-summary{margin:10px 18px 4px; display:grid; grid-template-columns:repeat(3,1fr); gap:7px;}
+.evo-chip{background:#fff; border:1px solid var(--line); border-radius:14px; padding:8px 5px; text-align:center; font-size:10.5px; color:var(--ink-soft); font-weight:900;}
+.evo-chip.on{background:#EAFBF3; border-color:var(--leaf); color:var(--leaf-dark);}
 
 .bar-block{margin:14px 18px;}
 .bar-label{display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:5px;}
@@ -311,11 +322,10 @@ body{
 .avatar-upload-btn{position:relative; display:flex; align-items:center; justify-content:center; min-height:46px; border:1px dashed #B9D6E5; border-radius:14px; background:#EEF8FF; color:var(--ink); font-weight:900; font-size:14px; cursor:pointer;}
 .avatar-upload-btn input{position:absolute; inset:0; opacity:0; cursor:pointer;}
 .profile-login-note{margin-top:12px; color:var(--ink-soft); font-size:12.5px; line-height:1.6;}
-.frag-big{margin:16px 16px 6px; background:linear-gradient(135deg,#7C5CFC,#9B7BFF); border-radius:22px; padding:18px; color:#fff; box-shadow:var(--shadow);}
-.frag-big .row{display:flex; justify-content:space-between; align-items:center;}
-.frag-big .amt{font-size:30px; font-weight:800;}
-.frag-big .lab{font-size:11.5px; opacity:.9; font-weight:700;}
-.frag-big button{margin-top:12px; width:100%; background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.5); color:#fff; padding:10px; border-radius:12px; font-weight:800; font-size:12.5px; font-family:inherit;}
+.growth-card{margin:16px 16px 6px; background:linear-gradient(135deg,#17A673,#63C7B2); border-radius:22px; padding:18px; color:#fff; box-shadow:var(--shadow);}
+.growth-card .amt{font-size:28px; font-weight:900;}
+.growth-card .lab{font-size:11.5px; opacity:.92; font-weight:800;}
+.growth-card p{margin:8px 0 0; font-size:12px; line-height:1.55; opacity:.94;}
 .source-list{margin:14px 16px; background:var(--paper); border-radius:18px; box-shadow:var(--shadow); overflow:hidden;}
 .source-item{display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); font-size:12.5px;}
 .source-item:last-child{border-bottom:none;}
@@ -443,7 +453,7 @@ body{
 	      <div class="brand-title"><h1 id="brandName">玩家</h1><span class="brand-level num" id="brandLevel">Lv.1</span></div>
 	    </div>
     <div class="stats">
-      <div class="pill frag"><span class="ico">💠</span><span class="num" id="topFrag">42</span></div>
+      <div class="pill pet"><span class="ico">🌱</span><span class="num" id="topPetStage">蛋</span></div>
       <div class="pill step"><span class="ico">👣</span><span class="num" id="topStep">0</span></div>
     </div>
   </div>
@@ -485,11 +495,12 @@ body{
         <div class="grass"></div>
       </div>
 
-      <div class="bar-block">
-        <div class="bar-label"><span>孵化進度</span><span class="num" id="hatchBarLabel">0 / 100</span></div>
-        <div class="bar-track"><div class="bar-fill hatch" id="hatchBar" style="width:0%"></div></div>
-        <div class="privacy-note" id="hatchHint">完成照片任務、盲盒路線或首次到訪地點，就能讓寵物蛋慢慢孵化。</div>
-      </div>
+	      <div class="bar-block">
+	        <div class="bar-label"><span>孵化進度</span><span class="num" id="hatchBarLabel">0 / 100</span></div>
+	        <div class="bar-track"><div class="bar-fill hatch" id="hatchBar" style="width:0%"></div></div>
+	        <div class="privacy-note" id="hatchHint">完成照片任務、盲盒路線或首次到訪地點，就能讓寵物蛋慢慢孵化。</div>
+	      </div>
+	      <div class="evo-summary" id="evoSummary"></div>
 
       <div class="bar-block">
         <div class="bar-label"><span>今日真實步數</span><span class="num" id="stepBarLabel">0 / 8,000</span></div>
@@ -584,22 +595,22 @@ body{
         <p id="profileMeta">登入後可以同步好友、定位分享與散步小隊。</p>
         <div class="profile-edit" id="profileEdit"></div>
       </div>
-      <div class="frag-big">
-        <div class="row"><div><div class="amt num" id="fragBig">42</div><div class="lab">記憶碎片</div></div><div style="font-size:36px;">💠</div></div>
-        <button onclick="openTopup()">取得更多記憶碎片</button>
-      </div>
-      <div class="section-title">碎片怎麼獲得</div>
-      <div class="source-list">
-        <div class="source-item"><div class="l">🚶 每日步數里程碑</div><div class="r">+2~5</div></div>
-        <div class="source-item"><div class="l">📍 首次到訪新地點</div><div class="r">+3</div></div>
-        <div class="source-item"><div class="l">📝 完成到訪筆記</div><div class="r">+5</div></div>
-        <div class="source-item"><div class="l">💬 回答被採納</div><div class="r">+5</div></div>
-        <div class="source-item"><div class="l">🧭 完成一條散步路線</div><div class="r">+10</div></div>
-        <div class="source-item"><div class="l">💳 儲值取得</div><div class="r">依方案</div></div>
-      </div>
+	      <div class="growth-card" id="profileGrowth">
+	        <div class="amt num" id="growthBig">0</div>
+	        <div class="lab">寵物成長值</div>
+	        <p>完成任務、到訪地點、儲存合照與走完盲盒路線，都會推進寵物進化。</p>
+	      </div>
+	      <div class="section-title">成長怎麼推進</div>
+	      <div class="source-list">
+	        <div class="source-item"><div class="l">🚶 每日真實步數</div><div class="r">持續累積</div></div>
+	        <div class="source-item"><div class="l">📍 首次到訪新地點</div><div class="r">孵化 +15</div></div>
+	        <div class="source-item"><div class="l">📸 完成到訪合照</div><div class="r">成長 +18</div></div>
+	        <div class="source-item"><div class="l">🧭 完成盲盒路線</div><div class="r">孵化 +30</div></div>
+	        <div class="source-item"><div class="l">📝 完成照片任務</div><div class="r">孵化 +8</div></div>
+	      </div>
       <div class="section-title">週／月城市回顧</div>
       <div class="review-list" id="reviewList"></div>
-	      <div class="principle"><b>寵物會從你的寵物蛋隨機孵化。</b><br>成長靠真實步行、到訪紀錄與盲盒路線，不再用照片或碎片直接生成。</div>
+	      <div class="principle"><b>寵物會從你的寵物蛋隨機孵化。</b><br>成長靠真實步行、到訪紀錄與盲盒路線，不再用消耗道具直接生成。</div>
     </div>
 
   </div>
@@ -679,7 +690,6 @@ const LOCATIONS = [
 
 /* ================= STATE ================= */
 let state = {
-  fragments: 42,
   steps: 0,
   stepGoal: 8000,
   bond: 62,
@@ -690,6 +700,7 @@ let state = {
   eggName: '小芽蛋',
   petName: '小豆',
   petSpecies: '',
+  petEvolutionStage: 1,
   hatchPoints: 0,
   hatchGoal: 100,
   hatched: false,
@@ -746,6 +757,7 @@ function loadLocalProgress(){
 	  state.eggName = String(petLog.eggName || state.eggName).slice(0, 12);
 	  state.petName = String(petLog.petName || state.petName || state.eggName).slice(0, 12);
 	  state.petSpecies = String(petLog.petSpecies || state.petSpecies || '').slice(0, 24);
+	  state.petEvolutionStage = Math.max(1, Math.min(3, Math.floor(Number(petLog.petEvolutionStage) || state.petEvolutionStage)));
 	  state.hatchPoints = Math.max(0, Math.floor(Number(petLog.hatchPoints) || 0));
 	  state.hatchGoal = Math.max(1, Math.floor(Number(petLog.hatchGoal) || state.hatchGoal));
 	  state.hatched = Boolean(petLog.hatched) || state.hatchPoints >= state.hatchGoal;
@@ -780,6 +792,7 @@ function persistPetLog(){
 	    eggName: state.eggName,
 	    petName: state.petName,
 	    petSpecies: state.petSpecies,
+	    petEvolutionStage: state.petEvolutionStage,
 	    hatchPoints: state.hatchPoints,
 	    hatchGoal: state.hatchGoal,
 	    hatched: state.hatched,
@@ -793,20 +806,67 @@ function persistPetLog(){
 	  return Math.floor(state.steps / 100) + Object.keys(state.visited || {}).length * 40 + (state.routeHistory || []).length * 90;
 	}
 
-	function computePetXp(){
+function computePetXp(){
 	  return Math.floor(state.hatchPoints / 2) + Math.floor(state.bond / 4) + Object.keys(state.visited || {}).length * 24 + (state.routeHistory || []).length * 60;
 	}
+
+const EVOLUTION_STAGES = [
+  { stage:1, label:'幼體', minXp:0, nextXp:180, difficulty:'基礎任務' },
+  { stage:2, label:'成長體', minXp:180, nextXp:520, difficulty:'需要更多路線與合照' },
+  { stage:3, label:'完全體', minXp:520, nextXp:null, difficulty:'已達完全進化' },
+];
 
 	function levelFromXp(xp){
 	  return Math.max(1, Math.floor(Math.sqrt(Math.max(0, xp) / 55)) + 1);
 	}
 
-	function updateLevels(){
+function updateLevels(){
 	  state.userXp = Math.max(state.userXp || 0, computeUserXp());
 	  state.petXp = Math.max(state.petXp || 0, computePetXp());
 	  state.userLevel = levelFromXp(state.userXp);
-	  state.petLevel = state.hatched ? levelFromXp(state.petXp) : 1;
+	  state.petEvolutionStage = state.hatched ? evolutionStageFromXp(state.petXp) : 1;
+	  state.petLevel = state.hatched ? Math.max(state.petEvolutionStage, levelFromXp(state.petXp)) : 1;
 	}
+
+function evolutionStageFromXp(xp){
+  const value = Math.max(0, Math.floor(Number(xp) || 0));
+  if(value >= EVOLUTION_STAGES[2].minXp) return 3;
+  if(value >= EVOLUTION_STAGES[1].minXp) return 2;
+  return 1;
+}
+
+function currentEvolution(){
+  return EVOLUTION_STAGES[state.petEvolutionStage - 1] || EVOLUTION_STAGES[0];
+}
+
+function nextEvolution(){
+  return EVOLUTION_STAGES[state.petEvolutionStage] || null;
+}
+
+function evolutionPercent(){
+  const current = currentEvolution();
+  const next = nextEvolution();
+  if(!state.hatched) return hatchPercent();
+  if(!next) return 100;
+  const span = Math.max(1, next.minXp - current.minXp);
+  return Math.max(0, Math.min(100, Math.round((state.petXp - current.minXp) / span * 100)));
+}
+
+function awardPetGrowth(points, reason = '任務'){
+  const gain = Math.max(0, Math.floor(Number(points) || 0));
+  if(!gain) return;
+  const beforeStage = state.petEvolutionStage;
+  state.petXp += gain;
+  updateLevels();
+  persistPetLog();
+  renderTop();
+  if(document.getElementById('screen-pet')?.classList.contains('active')) renderPet();
+  if(state.hatched && state.petEvolutionStage > beforeStage){
+    toast(`${state.petName} 進化成 ${currentEvolution().label}！`);
+  } else if(state.hatched) {
+    toast(`${reason}完成，寵物成長 +${gain}`);
+  }
+}
 
 function setTodaySteps(steps, source = 'motion'){
   const today = todayKey();
@@ -1183,7 +1243,7 @@ function renderQuest(){
           <h2>${latest?.title || '城市微探索完成'}</h2>
           <p>${latest?.summary || '照片、足跡與寵物成長已寫入你的私人回顧。'}</p>
         </div>
-        <span class="quest-status">+10 💠</span>
+	        <span class="quest-status">完成</span>
       </div>
       <div class="quest-route-secret">
         <strong>週/月回顧已更新</strong>
@@ -1370,38 +1430,38 @@ function continueBlindQuest(){
 
 function completeBlindQuest(){
   clearInterval(questTimerId);
-  const elapsedMin = Math.max(1, Math.round((Date.now() - questState.startedAt) / 60000));
-  const completedInTime = elapsedMin <= questState.timeLimitMin;
-  const gainedSteps = Math.max(0, state.steps - Number(questState.startedSteps || state.steps));
-  const reward = 10 + questState.route.length * 2 + (completedInTime ? 5 : 0);
-  state.fragments += reward;
-  state.bond = Math.min(100, state.bond + 5);
+	  const elapsedMin = Math.max(1, Math.round((Date.now() - questState.startedAt) / 60000));
+	  const completedInTime = elapsedMin <= questState.timeLimitMin;
+	  const gainedSteps = Math.max(0, state.steps - Number(questState.startedSteps || state.steps));
+	  const growthReward = 45 + questState.route.length * 10 + (completedInTime ? 20 : 0);
+	  state.bond = Math.min(100, state.bond + 5);
 	  state.userXp += 90;
-	  state.petXp += 60;
+	  awardHatchPoints(30, '盲盒路線');
+	  if(state.hatched) awardPetGrowth(growthReward, '盲盒路線');
+	  else state.petXp += 20;
 	  updateLevels();
-  awardHatchPoints(30, '盲盒路線');
-  const finalLoc = questState.route.at(-1);
+	  const finalLoc = questState.route.at(-1);
   const entry = {
     id: `route-${Date.now()}`,
     title: `${questState.selectedTheme}・${finalLoc?.tag || '城市角落'}`,
     summary: `你在不知道終點的情況下完成 ${questState.route.length} 段線索，最後抵達 ${finalLoc?.name || '未知角落'}。`,
     time: questState.selectedTime,
-    pace: questState.selectedPace,
-    tasks: questState.route.length,
-    steps: gainedSteps,
-    reward,
-    createdAt: Date.now(),
-  };
+	    pace: questState.selectedPace,
+	    tasks: questState.route.length,
+	    steps: gainedSteps,
+	    reward: growthReward,
+	    createdAt: Date.now(),
+	  };
   state.routeHistory.unshift(entry);
   state.routeHistory = state.routeHistory.slice(0, 8);
   window.FootprintOnline?.recordRoute?.(entry);
   questState.active = false;
   questState.completed = true;
-  renderTop();
-  renderQuest();
-  renderReviews();
-  toast(`旅程完成，獲得 ${reward} 記憶碎片`);
-}
+	  renderTop();
+	  renderQuest();
+	  renderReviews();
+	  toast(`旅程完成，寵物成長 +${growthReward}`);
+	}
 
 function abortQuest(){
   clearInterval(questTimerId);
@@ -1432,7 +1492,7 @@ function renderReviews(){
   list.innerHTML = `
     <div class="review-card"><strong>本週城市回顧</strong><p>完成 ${state.routeHistory.length} 次探索，累積約 ${totalSteps.toLocaleString()} 步。最常選擇：${state.routeHistory[0].title}。</p></div>
     ${state.routeHistory.slice(0,3).map((entry)=>`
-      <div class="review-card"><strong>${entry.title}</strong><p>${entry.summary}<br>任務 ${entry.tasks} 個・${entry.time}・+${entry.reward} 記憶碎片</p></div>
+	      <div class="review-card"><strong>${entry.title}</strong><p>${entry.summary}<br>任務 ${entry.tasks} 個・${entry.time}・寵物成長 +${entry.reward}</p></div>
     `).join('')}
   `;
 }
@@ -2650,10 +2710,26 @@ function petSVG(size, color, accessories){
 	}
 
 const PET_SPECIES = [
-  { id:'mossling', name:'苔芽獸', body:'#6CCB7F', head:'#7DDA8A', belly:'#FFF3B0', accent:'#2FB16D', parts:['sprout','tail'], trait:'頭頂會長出小芽，喜歡公園和雨後牆角。' },
-  { id:'lanternpup', name:'燈絨獸', body:'#FFB35C', head:'#FFC77A', belly:'#FFF1D0', accent:'#FF6B5B', parts:['ears','tail'], trait:'耳朵像小燈籠，完成夜間或招牌任務時特別活躍。' },
-  { id:'drizzlefin', name:'雨鰭獸', body:'#63C7D8', head:'#8FDEF0', belly:'#EAFBFF', accent:'#4B8BFF', parts:['fins','tail'], trait:'身側有透明鰭片，擅長記住河道、天橋與潮濕街景。' },
-  { id:'bookmoth', name:'頁翼獸', body:'#B79CFF', head:'#D2C3FF', belly:'#FFF7D8', accent:'#7C5CFC', parts:['wings','ears'], trait:'背後有書頁狀翅膀，會把路線整理成圖鑑回憶。' },
+  {
+    id:'mossling', name:'苔芽獸', body:'#6CCB7F', head:'#7DDA8A', belly:'#FFF3B0', accent:'#2FB16D', trait:'頭頂會長出小芽，喜歡公園和雨後牆角。',
+    forms:[{name:'芽種幼體', parts:['sprout']}, {name:'苔葉成長體', parts:['sprout','tail']}, {name:'森冠完全體', parts:['sprout','tail','crown','orbit']}],
+  },
+  {
+    id:'lanternpup', name:'燈絨獸', body:'#FFB35C', head:'#FFC77A', belly:'#FFF1D0', accent:'#FF6B5B', trait:'耳朵像小燈籠，完成招牌與夜間街景任務時特別活躍。',
+    forms:[{name:'微光幼體', parts:['ears']}, {name:'街燈成長體', parts:['ears','tail']}, {name:'燈冠完全體', parts:['ears','tail','crown','orbit']}],
+  },
+  {
+    id:'drizzlefin', name:'雨鰭獸', body:'#63C7D8', head:'#8FDEF0', belly:'#EAFBFF', accent:'#4B8BFF', trait:'身側有透明鰭片，擅長記住河道、天橋與潮濕街景。',
+    forms:[{name:'水滴幼體', parts:['fins']}, {name:'雨鰭成長體', parts:['fins','tail']}, {name:'潮冠完全體', parts:['fins','tail','crown','orbit']}],
+  },
+  {
+    id:'bookmoth', name:'頁翼獸', body:'#B79CFF', head:'#D2C3FF', belly:'#FFF7D8', accent:'#7C5CFC', trait:'背後有書頁狀翅膀，會把路線整理成圖鑑回憶。',
+    forms:[{name:'紙頁幼體', parts:['wings']}, {name:'頁翼成長體', parts:['wings','ears']}, {name:'典藏完全體', parts:['wings','ears','crown','orbit']}],
+  },
+  {
+    id:'windspore', name:'風孢靈', body:'#9FD6B8', head:'#D7F3DE', belly:'#F8FFD8', accent:'#FFC93C', trait:'會收集路口風向與街角氣味，適合長距離散步路線。',
+    forms:[{name:'孢點幼體', parts:['tail']}, {name:'風旋成長體', parts:['tail','fins']}, {name:'風環完全體', parts:['tail','fins','horns','orbit']}],
+  },
 ];
 
 function pickPetSpecies(){
@@ -2668,21 +2744,29 @@ function currentPetSpecies(){
   return PET_SPECIES.find((species) => species.id === id) || PET_SPECIES[0];
 }
 
+function currentPetForm(species = currentPetSpecies()){
+  return species.forms?.[state.petEvolutionStage - 1] || species.forms?.[0] || {name:species.name, parts:[]};
+}
+
 function pet3DHtml(species = currentPetSpecies(), includeNote = true){
-  const part = (name, className) => species.parts.includes(name) ? `<i class="pet3d-part ${className}"></i>` : '';
+  const form = currentPetForm(species);
+  const parts = new Set(form.parts || []);
+  const part = (name, className) => parts.has(name) ? `<i class="pet3d-part ${className}"></i>` : '';
   return `
-    <div class="pet3d-model" data-testid="pet-3d-model" style="--body:${species.body};--head:${species.head};--belly:${species.belly};--accent:${species.accent};">
+    <div class="pet3d-model evo-${state.petEvolutionStage}" data-testid="pet-3d-model" style="--body:${species.body};--head:${species.head};--belly:${species.belly};--accent:${species.accent};">
       <i class="pet3d-shadow"></i>
       ${part('wings','pet3d-wing left')}${part('wings','pet3d-wing right')}
       <i class="pet3d-body"></i>
       <i class="pet3d-head">
         ${part('ears','pet3d-ear left')}${part('ears','pet3d-ear right')}${part('sprout','pet3d-sprout')}
+        ${part('horns','pet3d-horns left')}${part('horns','pet3d-horns right')}${part('crown','pet3d-crown')}
         <i class="pet3d-belly"></i>
         <i class="pet3d-eye left"></i><i class="pet3d-eye right"></i><i class="pet3d-mouth"></i>
       </i>
       ${part('fins','pet3d-fin left')}${part('fins','pet3d-fin right')}${part('tail','pet3d-tail')}
+      ${part('orbit','pet3d-orbit')}
     </div>
-    ${includeNote ? `<div class="pet-species-note">${species.name}・拖曳可以 360° 旋轉查看</div>` : ''}
+    ${includeNote ? `<div class="pet-species-note">${species.name}・${form.name}・拖曳可以 360° 旋轉查看</div>` : ''}
   `;
 }
 
@@ -3003,14 +3087,13 @@ function startCheckin(id){
 }
 function finishCheckin(id){
   const l = LOCATIONS.find(x=>x.id===id);
-  const acc = accessoryFor(l);
-  const firstVisit = !state.visited[id];
-  state.visited[id] = {date:new Date().toISOString().slice(0,10)};
+	  const acc = accessoryFor(l);
+	  const firstVisit = !state.visited[id];
+	  state.visited[id] = {date:new Date().toISOString().slice(0,10)};
 	  if(firstVisit && !state.equipped.includes(acc.id)) state.equipped.push(acc.id);
-	  state.fragments += 3;
 	  state.userXp += firstVisit ? 40 : 10;
-	  state.petXp += firstVisit ? 24 : 8;
 	  if(firstVisit) awardHatchPoints(15, '首次到訪');
+	  if(state.hatched) awardPetGrowth(firstVisit ? 32 : 10, '到訪地點');
 	  updateLevels();
 	  persistVisitLog();
 	  persistPetLog();
@@ -3020,11 +3103,11 @@ function finishCheckin(id){
     <div class="success-panel">
       <div class="success-badge">${acc.icon}</div>
       <h3>到訪成功！</h3>
-      <div class="sub">已寫入「${l.name}」的地點記憶</div>
-      <div class="reward-row">
-        <div class="reward-chip">💠 +3 記憶碎片</div>
-        <div class="reward-chip">${acc.icon} 解鎖 ${acc.name}</div>
-      </div>
+	      <div class="sub">已寫入「${l.name}」的地點記憶</div>
+	      <div class="reward-row">
+	        <div class="reward-chip">🌱 寵物成長 +${firstVisit ? 32 : 10}</div>
+	        <div class="reward-chip">${acc.icon} 解鎖 ${acc.name}</div>
+	      </div>
       <button class="btn btn-primary" onclick="openPhotoStage('${id}')">📸 與寵物合照留念</button>
       <button class="btn btn-ghost" onclick="closeSheet(); renderList();">稍後再說</button>
     </div>`;
@@ -3071,9 +3154,12 @@ function makeDraggable(el, bounds){
 function saveMemory(id){
   state.bond = Math.min(100, state.bond+2);
   state.userXp += 12;
-  state.petXp += 18;
-  updateLevels();
-  persistPetLog();
+  if(state.hatched) awardPetGrowth(18, '合照記憶');
+  else {
+    state.petXp += 8;
+    updateLevels();
+    persistPetLog();
+  }
   renderTop();
   toast('記憶合照已儲存到寵物履歷 📌');
   closeSheet(); renderList();
@@ -3129,17 +3215,28 @@ function renamePetEgg(){
 function renderPet(){
   const percent = hatchPercent();
   const species = currentPetSpecies();
+  const form = currentPetForm(species);
+  const evo = currentEvolution();
+  const next = nextEvolution();
+  const evoPct = evolutionPercent();
   document.getElementById('petName').textContent = state.hatched ? state.petName : state.eggName;
   const holder = document.getElementById('petHolder');
   holder.classList.toggle('pet3d-ready', state.hatched);
   holder.innerHTML = state.hatched ? pet3DHtml(species) : eggSVG(150, percent);
   if(state.hatched) bindPet3DRotation();
-  document.getElementById('petLevel').textContent = state.hatched ? 'Lv.'+state.petLevel : '孵化中';
-  document.querySelector('#screen-pet .pet-sub').textContent = state.hatched ? `${species.name}：${species.trait}` : '完成任務讓寵物蛋慢慢孵化，孵化後會隨機成為開發者設計的 3D 城市夥伴。';
+  document.getElementById('petLevel').textContent = state.hatched ? `${evo.label} Lv.${state.petLevel}` : '孵化中';
+  document.querySelector('#screen-pet .pet-sub').textContent = state.hatched ? `${species.name}・${form.name}：${species.trait}` : '完成任務讓寵物蛋慢慢孵化，孵化後會隨機成為 5 種開發者設計的 3D 城市夥伴。';
   document.getElementById('petNameEdit').textContent = state.hatched ? '改名' : '命名';
-  document.getElementById('hatchBarLabel').textContent = state.hatched ? '已孵化' : `${state.hatchPoints} / ${state.hatchGoal}`;
-  document.getElementById('hatchBar').style.width = percent+'%';
-  document.getElementById('hatchHint').textContent = state.hatched ? `${state.petName} 已經孵化，寵物 Lv.${state.petLevel}・繼續散步可以提升等級與履歷。` : `目前 ${percent}%・完成照片任務、盲盒路線或首次到訪地點可增加孵化進度。`;
+  document.getElementById('hatchBarLabel').textContent = state.hatched ? (next ? `${state.petXp} / ${next.minXp}` : '完全進化') : `${state.hatchPoints} / ${state.hatchGoal}`;
+  document.getElementById('hatchBar').style.width = (state.hatched ? evoPct : percent)+'%';
+  document.getElementById('hatchHint').textContent = state.hatched
+    ? (next ? `目前 ${evo.label}・下一型態 ${next.label} 需要 ${next.minXp - state.petXp} 成長值，難度：${next.difficulty}。` : `${state.petName} 已達完全體，繼續散步會累積履歷與等級。`)
+    : `目前 ${percent}%・完成照片任務、盲盒路線或首次到訪地點可增加孵化進度。`;
+  document.getElementById('evoSummary').innerHTML = EVOLUTION_STAGES.map((stage) => `
+    <div class="evo-chip ${state.hatched && state.petEvolutionStage === stage.stage ? 'on' : ''}">
+      <div>${stage.label}</div><div class="num">${stage.minXp}+</div>
+    </div>
+  `).join('');
   document.getElementById('stepBarLabel').textContent = state.steps.toLocaleString()+' / '+state.stepGoal.toLocaleString();
   document.getElementById('stepBar').style.width = Math.min(100, state.steps/state.stepGoal*100)+'%';
   if(stepTracker.enabled) updateStepStatus(`真實步數記錄中・今日 ${state.steps.toLocaleString()} 步`);
@@ -3201,30 +3298,18 @@ function renderTop(){
   const displayName = onlineState.user?.displayName || '玩家';
   const brandName = document.getElementById('brandName');
   const brandLevel = document.getElementById('brandLevel');
-  if(brandName) brandName.textContent = displayName;
-  if(brandLevel) brandLevel.textContent = `Lv.${state.userLevel}`;
-  document.getElementById('topFrag').textContent = state.fragments;
-  document.getElementById('topStep').textContent = state.steps.toLocaleString();
-  document.getElementById('fragBig').textContent = state.fragments;
-  persistStepLog();
-}
+	  if(brandName) brandName.textContent = displayName;
+	  if(brandLevel) brandLevel.textContent = `Lv.${state.userLevel}`;
+	  const topPetStage = document.getElementById('topPetStage');
+	  if(topPetStage) topPetStage.textContent = state.hatched ? currentEvolution().label : '蛋';
+	  document.getElementById('topStep').textContent = state.steps.toLocaleString();
+	  const growthBig = document.getElementById('growthBig');
+	  if(growthBig) growthBig.textContent = state.petXp.toLocaleString();
+	  persistStepLog();
+	}
 
-/* ================= MODALS: topup / generate ================= */
-function openTopup(){
-  document.getElementById('modalContent').innerHTML = `
-    <h3>取得記憶碎片</h3>
-    <div class="source-list">
-      <div class="source-item"><div class="l">🚶 步行 1,000 步</div><div class="r">+2</div></div>
-      <div class="source-item"><div class="l">🧭 完成散步路線</div><div class="r">+10</div></div>
-      <div class="source-item"><div class="l">💳 小包（30 枚）</div><div class="r">NT$30</div></div>
-      <div class="source-item"><div class="l">💳 大包（150 枚）</div><div class="r">NT$120</div></div>
-    </div>
-    <p style="font-size:11.5px; color:var(--ink-soft); text-align:center; margin:10px 0 4px;">碎片可儲值取得，但地點配件與寵物成長只能靠真實步行與到訪解鎖。</p>
-    <button class="btn btn-primary" onclick="closeModal()">知道了</button>
-  `;
-  document.getElementById('modalOverlay').classList.add('open');
-}
-function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
+	/* ================= MODALS ================= */
+	function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
 
 /* ================= INIT ================= */
 renderFilters();
