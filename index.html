@@ -2742,6 +2742,7 @@ let lastMapTouchAt = 0;
 let lastMapTouchEventAt = 0;
 let pendingMapExitTimer = null;
 let mapTouchGesture = null;
+let initialMapStabilized = false;
 
 function focusOwnLocation(zoom = USER_LOCATION_ZOOM){
   if(!map) return;
@@ -2780,6 +2781,29 @@ function resizeMapSoon(nextFullscreen = document.getElementById('mapWrap')?.clas
       }
     }
   }, 80);
+}
+
+function stabilizeMapViewport({forceZoom = false} = {}){
+  if(!map || !window.google?.maps) return;
+  const wrap = document.getElementById('mapWrap');
+  const fullscreen = wrap?.classList.contains('map-fullscreen');
+  google.maps.event.trigger(map, 'resize');
+  map.setCenter({lat: HERE.lat, lng: HERE.lng});
+  if(forceZoom && !fullscreen && typeof map.setZoom === 'function') map.setZoom(DEFAULT_MAP_ZOOM);
+  placeUserMarker();
+}
+
+function stabilizeInitialMap(){
+  if(initialMapStabilized || !map || !window.google?.maps) return;
+  initialMapStabilized = true;
+  [0, 80, 180, 360, 800, 1400].forEach((delay) => {
+    setTimeout(() => stabilizeMapViewport({forceZoom: delay <= 180}), delay);
+  });
+  const once = window.google?.maps?.event?.addListenerOnce;
+  if(typeof once === 'function'){
+    once(map, 'idle', () => stabilizeMapViewport());
+    once(map, 'tilesloaded', () => stabilizeMapViewport());
+  }
 }
 
 function toggleMapFullscreen(force){
@@ -2875,6 +2899,7 @@ function handleMapClick(event){
 // Maps JavaScript API 載入完成後，Google 會自動呼叫這個 callback（見 <head> 裡的 script 標籤）
 function initMap(){
   if(mapLoadTimer) clearTimeout(mapLoadTimer);
+  mapLoadTimer = null;
   map = new google.maps.Map(document.getElementById('map'), {
     center: {lat: HERE.lat, lng: HERE.lng},
     zoom: DEFAULT_MAP_ZOOM,
@@ -2886,7 +2911,9 @@ function initMap(){
     rotateControl: false,
     fullscreenControl: false
   });
+  placeUserMarker();
   renderMapMarkers();
+  stabilizeInitialMap();
   setTimeout(() => fetchNearbyRealPlaces(currentFilter, { preserveScroll: currentMapScrollTop() > 0 }), 250);
 }
 

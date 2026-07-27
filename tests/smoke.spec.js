@@ -1474,6 +1474,68 @@ test('locating before Google Maps is ready does not report Places API failure', 
   expect(result.messages.join('\n')).not.toContain('附近地點查詢失敗');
 });
 
+test('map initializes visibly without pressing locate first', async ({ page }) => {
+  await page.goto('http://localhost:5173');
+  const result = await page.evaluate(async () => {
+    window.resizeEvents = [];
+    window.centerCalls = [];
+    window.zoomCalls = [];
+    window.markerTitles = [];
+    window.listenerNames = [];
+    initialMapStabilized = false;
+    map = null;
+    userMarker = null;
+    mapMarkers = [];
+    window.google = {
+      maps: {
+        SymbolPath: { CIRCLE: 'circle' },
+        Map: class Map {
+          constructor(element, options) {
+            this.elementId = element.id;
+            this.options = options;
+          }
+          setCenter(value) { window.centerCalls.push(value); }
+          setZoom(value) { window.zoomCalls.push(value); }
+        },
+        Marker: class Marker {
+          constructor(options) {
+            this.options = options;
+            window.markerTitles.push(options.title || 'user');
+          }
+          setMap() {}
+          addListener() {}
+        },
+        event: {
+          trigger(_map, name) { window.resizeEvents.push(name); },
+          addListenerOnce(_map, name, callback) {
+            window.listenerNames.push(name);
+            setTimeout(callback, 0);
+          },
+        },
+      },
+    };
+    initMap();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    return {
+      mapElement: map.elementId,
+      centerCalls: window.centerCalls,
+      zoomCalls: window.zoomCalls,
+      resizeCount: window.resizeEvents.filter((name) => name === 'resize').length,
+      markerCount: window.markerTitles.length,
+      listeners: window.listenerNames,
+      loadText: document.getElementById('map').textContent,
+    };
+  });
+
+  expect(result.mapElement).toBe('map');
+  expect(result.centerCalls.at(-1)).toEqual({ lat: 24.1815, lng: 120.6449 });
+  expect(result.zoomCalls).toContain(14);
+  expect(result.resizeCount).toBeGreaterThanOrEqual(2);
+  expect(result.markerCount).toBeGreaterThan(0);
+  expect(result.listeners).toEqual(expect.arrayContaining(['idle', 'tilesloaded']));
+  expect(result.loadText).not.toContain('地圖載入中');
+});
+
 test('exiting fullscreen restores normal local map zoom', async ({ page }) => {
   await page.goto('http://localhost:5173');
   const result = await page.evaluate(async () => {
