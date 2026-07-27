@@ -1594,6 +1594,9 @@ test('profile character customization persists and is included in public status'
 
   await expect(page.locator('#profileHome .character-scene')).toBeVisible();
   await expect(page.locator('#profileEdit .character-option')).toHaveCount(11);
+  await expect(page.locator('#profileEdit .character-option').first()).toBeDisabled();
+  await expect(page.locator('#profileEdit .character-save-row .btn-primary')).toBeDisabled();
+  await expect(page.locator('#profileEdit .character-save-row .btn-ghost')).toContainText('編輯');
   await expect(page.locator('#profileEdit')).not.toContainText('毛帽');
   await expect(page.locator('#profileEdit')).not.toContainText('髮型');
 
@@ -1605,20 +1608,40 @@ test('profile character customization persists and is included in public status'
       },
     };
     const originalStored = JSON.parse(localStorage.getItem('footprintPetLog:v1'))?.character || state.character;
+    const lockedBeforeEdit = {
+      editing: state.characterEditing,
+      optionDisabled: document.querySelector('.character-option')?.disabled,
+      saveDisabled: document.querySelector('.character-save-row .btn-primary')?.disabled,
+    };
+    setCharacterOption('gender', 'female');
+    const ignoredWhileLocked = {
+      character: state.character,
+      draft: state.characterDraft,
+    };
+    editCharacterChanges();
     setCharacterOption('gender', 'female');
     setCharacterOption('eyes', 'large');
     setCharacterOption('brow', 'long');
     setCharacterOption('outfit', 'jacket');
     const beforeSave = {
+      editing: state.characterEditing,
       character: state.character,
       draft: state.characterDraft,
       stored: JSON.parse(localStorage.getItem('footprintPetLog:v1'))?.character || state.character,
       publicCharacter: publicStatusPayload().character,
     };
     saveCharacterChanges();
+    const lockedAfterSave = {
+      editing: state.characterEditing,
+      optionDisabled: document.querySelector('.character-option')?.disabled,
+      saveDisabled: document.querySelector('.character-save-row .btn-primary')?.disabled,
+    };
     return {
       originalStored,
+      lockedBeforeEdit,
+      ignoredWhileLocked,
       beforeSave,
+      lockedAfterSave,
       character: state.character,
       stored: JSON.parse(localStorage.getItem('footprintPetLog:v1')).character,
       publicCharacter: publicStatusPayload().character,
@@ -1632,14 +1655,28 @@ test('profile character customization persists and is included in public status'
     brow: 'long',
     outfit: 'jacket',
   });
+  expect(result.lockedBeforeEdit).toEqual({
+    editing: false,
+    optionDisabled: true,
+    saveDisabled: true,
+  });
+  expect(result.ignoredWhileLocked.character).toEqual(result.originalStored);
+  expect(result.ignoredWhileLocked.draft).toBeFalsy();
+  expect(result.beforeSave.editing).toBe(true);
   expect(result.beforeSave.draft).toEqual(result.character);
   expect(result.beforeSave.character).toEqual(result.originalStored);
   expect(result.beforeSave.stored).toEqual(result.originalStored);
   expect(result.beforeSave.publicCharacter).toEqual(result.originalStored);
+  expect(result.lockedAfterSave).toEqual({
+    editing: false,
+    optionDisabled: true,
+    saveDisabled: true,
+  });
   expect(result.stored).toEqual(result.character);
   expect(result.publicCharacter).toEqual(result.character);
   await expect(page.locator('#profileHome .character-figure')).toHaveClass(/gender-female/);
   await expect(page.locator('#profileHome .character-figure')).toHaveClass(/outfit-jacket/);
+  await expect(page.locator('#profileEdit .character-option').first()).toBeDisabled();
 });
 
 test('friend distance card opens a friend profile before map focus', async ({ page }) => {

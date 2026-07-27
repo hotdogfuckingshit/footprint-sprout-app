@@ -433,7 +433,10 @@ body{
 .character-options.two{grid-template-columns:repeat(2,1fr);}
 .character-option{border:1px solid var(--line); border-radius:13px; padding:8px 6px; background:#F8FCFF; color:var(--ink); font-size:11px; font-weight:900; font-family:inherit; cursor:pointer;}
 .character-option.on{background:#EAFBF3; border-color:var(--leaf); color:var(--leaf-dark);}
-.character-save-row{display:grid; grid-template-columns:1fr; gap:6px; margin-top:2px;}
+.character-option:disabled{cursor:not-allowed; opacity:.62; background:#F2F7FA; color:#7C8CA5;}
+.character-option.on:disabled{opacity:.72; background:#EAFBF3; color:var(--leaf-dark);}
+.character-save-row{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:2px;}
+.character-save-row .btn:disabled{opacity:.55; cursor:not-allowed; transform:none; box-shadow:none;}
 .friend-card{cursor:pointer;}
 .friend-profile-sheet{display:grid; gap:12px; padding:0 18px 22px;}
 .friend-profile-sheet > .sheet-head{padding-left:0; padding-right:0;}
@@ -857,7 +860,8 @@ let state = {
   routeHistory: [],
   ordinarySkipDate: '',
   character: {...DEFAULT_CHARACTER},
-  characterDraft: null
+  characterDraft: null,
+  characterEditing: false
 };
 
 const STEP_LOG_KEY = 'footprintStepLogs:v1';
@@ -1901,6 +1905,8 @@ function activeCharacter(){
 function characterEditorHtml(){
   const labels = { gender:'角色', eyes:'眼睛', brow:'眉毛', outfit:'服裝' };
   const current = activeCharacter();
+  const editing = Boolean(state.characterEditing);
+  const disabled = editing ? '' : 'disabled';
   return `
     <div class="character-editor">
       ${Object.entries(CHARACTER_OPTIONS).map(([key, options]) => `
@@ -1908,19 +1914,27 @@ function characterEditorHtml(){
           <div class="character-label">${labels[key]}</div>
           <div class="character-options ${options.length === 2 ? 'two' : ''}">
             ${options.map(([value, label]) => `
-              <button class="character-option ${current[key] === value ? 'on' : ''}" onclick="setCharacterOption('${key}','${value}')">${label}</button>
+              <button class="character-option ${current[key] === value ? 'on' : ''}" ${disabled} onclick="setCharacterOption('${key}','${value}')">${label}</button>
             `).join('')}
           </div>
         </div>
       `).join('')}
       <div class="character-save-row">
-        <button class="btn btn-primary" onclick="saveCharacterChanges()">儲存變更</button>
+        <button class="btn btn-primary" ${editing ? '' : 'disabled'} onclick="saveCharacterChanges()">儲存變更</button>
+        <button class="btn btn-ghost" onclick="editCharacterChanges()">編輯</button>
       </div>
     </div>
   `;
 }
 
+function editCharacterChanges(){
+  state.characterEditing = true;
+  state.characterDraft = normalizeCharacter(state.character);
+  renderProfile();
+}
+
 function setCharacterOption(key, value){
+  if(!state.characterEditing) return;
   if(!CHARACTER_OPTIONS[key]?.some(([option]) => option === value)) return;
   state.characterDraft = normalizeCharacter({...activeCharacter(), [key]: value});
   renderProfile();
@@ -1929,6 +1943,7 @@ function setCharacterOption(key, value){
 function saveCharacterChanges(){
   state.character = activeCharacter();
   state.characterDraft = null;
+  state.characterEditing = false;
   persistPetLog();
   scheduleUserStatusSync();
   renderProfile();
